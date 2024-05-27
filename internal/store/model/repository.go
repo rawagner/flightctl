@@ -50,6 +50,12 @@ func NewRepositoryFromApiResource(resource *api.Repository) *Repository {
 	}
 }
 
+func hideValue(value *string) {
+	if value != nil {
+		*value = *util.StrToPtr("*****")
+	}
+}
+
 func (f *Repository) ToApiResource() api.Repository {
 	if f == nil {
 		return api.Repository{}
@@ -65,8 +71,15 @@ func (f *Repository) ToApiResource() api.Repository {
 		status = f.Status.Data
 	}
 
-	if spec.Password != nil {
-		spec.Password = util.StrToPtr("*****")
+	if spec.HttpConfig != nil {
+		hideValue(spec.HttpConfig.Password)
+		hideValue(spec.HttpConfig.TlsClientCertKey)
+		hideValue(spec.HttpConfig.TlsClientCertData)
+	}
+
+	if spec.SshConfig != nil {
+		hideValue(spec.SshConfig.SshPrivateKey)
+		hideValue(spec.SshConfig.PrivateKeyPassphrase)
 	}
 
 	metadataLabels := util.LabelArrayToMap(f.Resource.Labels)

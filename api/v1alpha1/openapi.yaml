@@ -1622,12 +1622,9 @@ components:
         - metadata
         - spec
       description: Repository represents a git repository
-    RepositorySpec:
+    RepositoryHttpConfig:
       type: object
       properties:
-        repo:
-          type: string
-          description: 'The (possibly remote) repository URL to clone from'
         username:
           type: string
           description: 'The username for auth with HTTP transport'
@@ -1635,6 +1632,44 @@ components:
           type: string
           description: 'The password for auth with HTTP transport'
           format: password
+        tlsClientCertData:
+          type: string
+          description: 'Base64 encoded TLS cert data'
+          format: password
+        tlsClientCertKey:
+          type: string
+          description: 'Base64 encoded TLS cert key'
+          format: password
+        rootCA:
+          type: string
+          description: 'Base64 encoded root CA'
+        skipServerVerification:
+          type: boolean
+          description: 'Skip remote server verification'
+    RepositoryGitConfig:
+      type: object
+      properties:
+        sshPrivateKey:
+          type: string
+          description: 'The private SSH key'
+          format: password
+        privateKeyPassphrase:
+          type: string
+          description: 'The passphrase for sshPrivateKey'
+          format: password
+        skipServerVerification:
+          type: boolean
+          description: 'Skip remote server verification'
+    RepositorySpec:
+      type: object
+      properties:
+        repo:
+          type: string
+          description: 'The (possibly remote) repository URL to clone from'
+        httpConfig:
+          $ref: '#/components/schemas/RepositoryHttpConfig'
+        sshConfig:
+          $ref: '#/components/schemas/RepositoryGitConfig'
     RepositoryStatus:
       type: object
       properties:

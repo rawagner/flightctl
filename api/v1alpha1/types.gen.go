@@ -418,6 +418,39 @@ type Repository struct {
 	Status *RepositoryStatus `json:"status,omitempty"`
 }
 
+// RepositoryGitConfig defines model for RepositoryGitConfig.
+type RepositoryGitConfig struct {
+	// PrivateKeyPassphrase The passphrase for sshPrivateKey
+	PrivateKeyPassphrase *string `json:"privateKeyPassphrase,omitempty"`
+
+	// SkipServerVerification Skip remote server verification
+	SkipServerVerification *bool `json:"skipServerVerification,omitempty"`
+
+	// SshPrivateKey The private SSH key
+	SshPrivateKey *string `json:"sshPrivateKey,omitempty"`
+}
+
+// RepositoryHttpConfig defines model for RepositoryHttpConfig.
+type RepositoryHttpConfig struct {
+	// Password The password for auth with HTTP transport
+	Password *string `json:"password,omitempty"`
+
+	// RootCA Base64 encoded root CA
+	RootCA *string `json:"rootCA,omitempty"`
+
+	// SkipServerVerification Skip remote server verification
+	SkipServerVerification *bool `json:"skipServerVerification,omitempty"`
+
+	// TlsClientCertData Base64 encoded TLS cert data
+	TlsClientCertData *string `json:"tlsClientCertData,omitempty"`
+
+	// TlsClientCertKey Base64 encoded TLS cert key
+	TlsClientCertKey *string `json:"tlsClientCertKey,omitempty"`
+
+	// Username The username for auth with HTTP transport
+	Username *string `json:"username,omitempty"`
+}
+
 // RepositoryList RepositoryList is a list of Repositories.
 type RepositoryList struct {
 	// ApiVersion APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
@@ -435,14 +468,11 @@ type RepositoryList struct {
 
 // RepositorySpec defines model for RepositorySpec.
 type RepositorySpec struct {
-	// Password The password for auth with HTTP transport
-	Password *string `json:"password,omitempty"`
+	HttpConfig *RepositoryHttpConfig `json:"httpConfig,omitempty"`
 
 	// Repo The (possibly remote) repository URL to clone from
-	Repo *string `json:"repo,omitempty"`
-
-	// Username The username for auth with HTTP transport
-	Username *string `json:"username,omitempty"`
+	Repo      *string              `json:"repo,omitempty"`
+	SshConfig *RepositoryGitConfig `json:"sshConfig,omitempty"`
 }
 
 // RepositoryStatus RepositoryStatus represents information about the status of a repository. Status may trail the actual state of a repository.
