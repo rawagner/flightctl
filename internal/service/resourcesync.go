@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"reflect"
 
+	api "github.com/flightctl/flightctl/api/v1alpha1"
 	"github.com/flightctl/flightctl/internal/api/server"
 	"github.com/flightctl/flightctl/internal/flterrors"
 	"github.com/flightctl/flightctl/internal/store"
@@ -144,6 +146,59 @@ func (h *ServiceHandler) DeleteResourceSync(ctx context.Context, request server.
 		return server.DeleteResourceSync200JSONResponse{}, nil
 	case flterrors.ErrResourceNotFound:
 		return server.DeleteResourceSync404JSONResponse{}, nil
+	default:
+		return nil, err
+	}
+}
+
+func (h *ServiceHandler) PatchResourceSync(ctx context.Context, request server.PatchResourceSyncRequestObject) (server.PatchResourceSyncResponseObject, error) {
+	orgId := store.NullOrgId
+
+	currentObj, err := h.store.ResourceSync().Get(ctx, orgId, request.Name)
+	if err != nil {
+		switch err {
+		case flterrors.ErrResourceIsNil:
+			return server.PatchResourceSync400JSONResponse{Message: err.Error()}, nil
+		case flterrors.ErrResourceNameIsNil:
+			return server.PatchResourceSync400JSONResponse{Message: err.Error()}, nil
+		case flterrors.ErrResourceNotFound:
+			return server.PatchResourceSync404JSONResponse{}, nil
+		default:
+			return nil, err
+		}
+	}
+
+	newObj := &api.ResourceSync{}
+	err = ApplyJSONPatch(currentObj, newObj, *request.Body)
+	if err != nil {
+		return server.PatchResourceSync401JSONResponse{Message: err.Error()}, nil
+	}
+
+	if currentObj.Metadata.Name != newObj.Metadata.Name {
+		return server.PatchResourceSync401JSONResponse{Message: "metadata.name is immutable"}, nil
+	}
+	if currentObj.ApiVersion != newObj.ApiVersion {
+		return server.PatchResourceSync401JSONResponse{Message: "apiVersion is immutable"}, nil
+	}
+	if currentObj.Kind != newObj.Kind {
+		return server.PatchResourceSync401JSONResponse{Message: "kind is immutable"}, nil
+	}
+	if !reflect.DeepEqual(currentObj.Status, newObj.Status) {
+		return server.PatchResourceSync401JSONResponse{Message: "status is immutable"}, nil
+	}
+
+	NilOutManagedObjectMetaProperties(&newObj.Metadata)
+	result, _, err := h.store.ResourceSync().CreateOrUpdate(ctx, orgId, newObj)
+
+	switch err {
+	case nil:
+		return server.PatchResourceSync200JSONResponse(*result), nil
+	case flterrors.ErrResourceIsNil:
+		return server.PatchResourceSync400JSONResponse{Message: err.Error()}, nil
+	case flterrors.ErrResourceNameIsNil:
+		return server.PatchResourceSync400JSONResponse{Message: err.Error()}, nil
+	case flterrors.ErrResourceNotFound:
+		return server.PatchResourceSync404JSONResponse{}, nil
 	default:
 		return nil, err
 	}

@@ -181,6 +181,11 @@ type ClientInterface interface {
 	// ReadFleet request
 	ReadFleet(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// PatchFleetWithBody request with any body
+	PatchFleetWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PatchFleetWithApplicationJSONPatchPlusJSONBody(ctx context.Context, name string, body PatchFleetApplicationJSONPatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ReplaceFleetWithBody request with any body
 	ReplaceFleetWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -232,6 +237,11 @@ type ClientInterface interface {
 
 	// ReadResourceSync request
 	ReadResourceSync(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PatchResourceSyncWithBody request with any body
+	PatchResourceSyncWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PatchResourceSyncWithApplicationJSONPatchPlusJSONBody(ctx context.Context, name string, body PatchResourceSyncApplicationJSONPatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ReplaceResourceSyncWithBody request with any body
 	ReplaceResourceSyncWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -646,6 +656,30 @@ func (c *Client) ReadFleet(ctx context.Context, name string, reqEditors ...Reque
 	return c.Client.Do(req)
 }
 
+func (c *Client) PatchFleetWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPatchFleetRequestWithBody(c.Server, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PatchFleetWithApplicationJSONPatchPlusJSONBody(ctx context.Context, name string, body PatchFleetApplicationJSONPatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPatchFleetRequestWithApplicationJSONPatchPlusJSONBody(c.Server, name, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) ReplaceFleetWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewReplaceFleetRequestWithBody(c.Server, name, contentType, body)
 	if err != nil {
@@ -864,6 +898,30 @@ func (c *Client) DeleteResourceSync(ctx context.Context, name string, reqEditors
 
 func (c *Client) ReadResourceSync(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewReadResourceSyncRequest(c.Server, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PatchResourceSyncWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPatchResourceSyncRequestWithBody(c.Server, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PatchResourceSyncWithApplicationJSONPatchPlusJSONBody(ctx context.Context, name string, body PatchResourceSyncApplicationJSONPatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPatchResourceSyncRequestWithApplicationJSONPatchPlusJSONBody(c.Server, name, body)
 	if err != nil {
 		return nil, err
 	}
@@ -2083,6 +2141,53 @@ func NewReadFleetRequest(server string, name string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewPatchFleetRequestWithApplicationJSONPatchPlusJSONBody calls the generic PatchFleet builder with application/json-patch+json body
+func NewPatchFleetRequestWithApplicationJSONPatchPlusJSONBody(server string, name string, body PatchFleetApplicationJSONPatchPlusJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPatchFleetRequestWithBody(server, name, "application/json-patch+json", bodyReader)
+}
+
+// NewPatchFleetRequestWithBody generates requests for PatchFleet with any type of body
+func NewPatchFleetRequestWithBody(server string, name string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/fleets/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewReplaceFleetRequest calls the generic ReplaceFleet builder with application/json body
 func NewReplaceFleetRequest(server string, name string, body ReplaceFleetJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -2690,6 +2795,53 @@ func NewReadResourceSyncRequest(server string, name string) (*http.Request, erro
 	return req, nil
 }
 
+// NewPatchResourceSyncRequestWithApplicationJSONPatchPlusJSONBody calls the generic PatchResourceSync builder with application/json-patch+json body
+func NewPatchResourceSyncRequestWithApplicationJSONPatchPlusJSONBody(server string, name string, body PatchResourceSyncApplicationJSONPatchPlusJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPatchResourceSyncRequestWithBody(server, name, "application/json-patch+json", bodyReader)
+}
+
+// NewPatchResourceSyncRequestWithBody generates requests for PatchResourceSync with any type of body
+func NewPatchResourceSyncRequestWithBody(server string, name string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "name", runtime.ParamLocationPath, name)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/v1/resourcesyncs/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PATCH", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewReplaceResourceSyncRequest calls the generic ReplaceResourceSync builder with application/json body
 func NewReplaceResourceSyncRequest(server string, name string, body ReplaceResourceSyncJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
@@ -3057,6 +3209,11 @@ type ClientWithResponsesInterface interface {
 	// ReadFleetWithResponse request
 	ReadFleetWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*ReadFleetResponse, error)
 
+	// PatchFleetWithBodyWithResponse request with any body
+	PatchFleetWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchFleetResponse, error)
+
+	PatchFleetWithApplicationJSONPatchPlusJSONBodyWithResponse(ctx context.Context, name string, body PatchFleetApplicationJSONPatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchFleetResponse, error)
+
 	// ReplaceFleetWithBodyWithResponse request with any body
 	ReplaceFleetWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReplaceFleetResponse, error)
 
@@ -3108,6 +3265,11 @@ type ClientWithResponsesInterface interface {
 
 	// ReadResourceSyncWithResponse request
 	ReadResourceSyncWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*ReadResourceSyncResponse, error)
+
+	// PatchResourceSyncWithBodyWithResponse request with any body
+	PatchResourceSyncWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchResourceSyncResponse, error)
+
+	PatchResourceSyncWithApplicationJSONPatchPlusJSONBodyWithResponse(ctx context.Context, name string, body PatchResourceSyncApplicationJSONPatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchResourceSyncResponse, error)
 
 	// ReplaceResourceSyncWithBodyWithResponse request with any body
 	ReplaceResourceSyncWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReplaceResourceSyncResponse, error)
@@ -3736,6 +3898,31 @@ func (r ReadFleetResponse) StatusCode() int {
 	return 0
 }
 
+type PatchFleetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *Fleet
+	JSON400      *Error
+	JSON401      *Error
+	JSON404      *Error
+}
+
+// Status returns HTTPResponse.Status
+func (r PatchFleetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PatchFleetResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type ReplaceFleetResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -4071,6 +4258,31 @@ func (r ReadResourceSyncResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r ReadResourceSyncResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PatchResourceSyncResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ResourceSync
+	JSON400      *Error
+	JSON401      *Error
+	JSON404      *Error
+}
+
+// Status returns HTTPResponse.Status
+func (r PatchResourceSyncResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PatchResourceSyncResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -4464,6 +4676,23 @@ func (c *ClientWithResponses) ReadFleetWithResponse(ctx context.Context, name st
 	return ParseReadFleetResponse(rsp)
 }
 
+// PatchFleetWithBodyWithResponse request with arbitrary body returning *PatchFleetResponse
+func (c *ClientWithResponses) PatchFleetWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchFleetResponse, error) {
+	rsp, err := c.PatchFleetWithBody(ctx, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePatchFleetResponse(rsp)
+}
+
+func (c *ClientWithResponses) PatchFleetWithApplicationJSONPatchPlusJSONBodyWithResponse(ctx context.Context, name string, body PatchFleetApplicationJSONPatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchFleetResponse, error) {
+	rsp, err := c.PatchFleetWithApplicationJSONPatchPlusJSONBody(ctx, name, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePatchFleetResponse(rsp)
+}
+
 // ReplaceFleetWithBodyWithResponse request with arbitrary body returning *ReplaceFleetResponse
 func (c *ClientWithResponses) ReplaceFleetWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ReplaceFleetResponse, error) {
 	rsp, err := c.ReplaceFleetWithBody(ctx, name, contentType, body, reqEditors...)
@@ -4628,6 +4857,23 @@ func (c *ClientWithResponses) ReadResourceSyncWithResponse(ctx context.Context, 
 		return nil, err
 	}
 	return ParseReadResourceSyncResponse(rsp)
+}
+
+// PatchResourceSyncWithBodyWithResponse request with arbitrary body returning *PatchResourceSyncResponse
+func (c *ClientWithResponses) PatchResourceSyncWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PatchResourceSyncResponse, error) {
+	rsp, err := c.PatchResourceSyncWithBody(ctx, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePatchResourceSyncResponse(rsp)
+}
+
+func (c *ClientWithResponses) PatchResourceSyncWithApplicationJSONPatchPlusJSONBodyWithResponse(ctx context.Context, name string, body PatchResourceSyncApplicationJSONPatchPlusJSONRequestBody, reqEditors ...RequestEditorFn) (*PatchResourceSyncResponse, error) {
+	rsp, err := c.PatchResourceSyncWithApplicationJSONPatchPlusJSONBody(ctx, name, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePatchResourceSyncResponse(rsp)
 }
 
 // ReplaceResourceSyncWithBodyWithResponse request with arbitrary body returning *ReplaceResourceSyncResponse
@@ -5752,6 +5998,53 @@ func ParseReadFleetResponse(rsp *http.Response) (*ReadFleetResponse, error) {
 	return response, nil
 }
 
+// ParsePatchFleetResponse parses an HTTP response from a PatchFleetWithResponse call
+func ParsePatchFleetResponse(rsp *http.Response) (*PatchFleetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PatchFleetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Fleet
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseReplaceFleetResponse parses an HTTP response from a ReplaceFleetWithResponse call
 func ParseReplaceFleetResponse(rsp *http.Response) (*ReplaceFleetResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -6327,6 +6620,53 @@ func ParseReadResourceSyncResponse(rsp *http.Response) (*ReadResourceSyncRespons
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePatchResourceSyncResponse parses an HTTP response from a PatchResourceSyncWithResponse call
+func ParsePatchResourceSyncResponse(rsp *http.Response) (*PatchResourceSyncResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PatchResourceSyncResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ResourceSync
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest Error
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
 		var dest Error

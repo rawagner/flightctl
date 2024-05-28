@@ -187,6 +187,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    patch:
+      tags:
+        - resourcesync
+      description: Patches the specified resourcesync
+      operationId: patchResourceSync
+      parameters:
+        - name: name
+          in: path
+          description: name of the resourcesync
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json-patch+json:
+            schema:
+              $ref: '#/components/schemas/PatchRequest'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceSync'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: NotFound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     delete:
       tags:
         - resourcesync
@@ -1298,6 +1340,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    patch:
+      tags:
+        - fleet
+      description: Patches the specified fleet
+      operationId: patchFleet
+      parameters:
+        - name: name
+          in: path
+          description: name of the fleet
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json-patch+json:
+            schema:
+              $ref: '#/components/schemas/PatchRequest'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Fleet'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        "404":
+          description: NotFound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     delete:
       tags:
         - fleet
@@ -1601,6 +1685,28 @@ paths:
                 $ref: '#/components/schemas/Error'
 components:
   schemas:
+    PatchRequest:
+      type: array
+      items:
+        type: object
+        additionalProperties: false
+        required:
+          - value
+          - op
+          - path
+        properties:
+          path:
+            description: A JSON Pointer path.
+            type: string
+          value:
+            description: The value to add or replace.
+          op:
+            description: The operation to perform.
+            type: string
+            enum:
+              - add
+              - replace
+              - remove
     Repository:
       type: object
       properties:
@@ -1651,7 +1757,7 @@ components:
       properties:
         sshPrivateKey:
           type: string
-          description: 'The private SSH key'
+          description: 'Base64 encoded private SSH key'
           format: password
         privateKeyPassphrase:
           type: string

@@ -93,6 +93,9 @@ type ServerInterface interface {
 	// (GET /api/v1/fleets/{name})
 	ReadFleet(w http.ResponseWriter, r *http.Request, name string)
 
+	// (PATCH /api/v1/fleets/{name})
+	PatchFleet(w http.ResponseWriter, r *http.Request, name string)
+
 	// (PUT /api/v1/fleets/{name})
 	ReplaceFleet(w http.ResponseWriter, r *http.Request, name string)
 
@@ -134,6 +137,9 @@ type ServerInterface interface {
 
 	// (GET /api/v1/resourcesyncs/{name})
 	ReadResourceSync(w http.ResponseWriter, r *http.Request, name string)
+
+	// (PATCH /api/v1/resourcesyncs/{name})
+	PatchResourceSync(w http.ResponseWriter, r *http.Request, name string)
 
 	// (PUT /api/v1/resourcesyncs/{name})
 	ReplaceResourceSync(w http.ResponseWriter, r *http.Request, name string)
@@ -277,6 +283,11 @@ func (_ Unimplemented) ReadFleet(w http.ResponseWriter, r *http.Request, name st
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// (PATCH /api/v1/fleets/{name})
+func (_ Unimplemented) PatchFleet(w http.ResponseWriter, r *http.Request, name string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // (PUT /api/v1/fleets/{name})
 func (_ Unimplemented) ReplaceFleet(w http.ResponseWriter, r *http.Request, name string) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -344,6 +355,11 @@ func (_ Unimplemented) DeleteResourceSync(w http.ResponseWriter, r *http.Request
 
 // (GET /api/v1/resourcesyncs/{name})
 func (_ Unimplemented) ReadResourceSync(w http.ResponseWriter, r *http.Request, name string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// (PATCH /api/v1/resourcesyncs/{name})
+func (_ Unimplemented) PatchResourceSync(w http.ResponseWriter, r *http.Request, name string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1067,6 +1083,32 @@ func (siw *ServerInterfaceWrapper) ReadFleet(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
+// PatchFleet operation middleware
+func (siw *ServerInterfaceWrapper) PatchFleet(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "name", runtime.ParamLocationPath, chi.URLParam(r, "name"), &name)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchFleet(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
 // ReplaceFleet operation middleware
 func (siw *ServerInterfaceWrapper) ReplaceFleet(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -1423,6 +1465,32 @@ func (siw *ServerInterfaceWrapper) ReadResourceSync(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
+// PatchResourceSync operation middleware
+func (siw *ServerInterfaceWrapper) PatchResourceSync(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithLocation("simple", false, "name", runtime.ParamLocationPath, chi.URLParam(r, "name"), &name)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchResourceSync(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
 // ReplaceResourceSync operation middleware
 func (siw *ServerInterfaceWrapper) ReplaceResourceSync(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -1733,6 +1801,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/api/v1/fleets/{name}", wrapper.ReadFleet)
 	})
 	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/api/v1/fleets/{name}", wrapper.PatchFleet)
+	})
+	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/api/v1/fleets/{name}", wrapper.ReplaceFleet)
 	})
 	r.Group(func(r chi.Router) {
@@ -1773,6 +1844,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/resourcesyncs/{name}", wrapper.ReadResourceSync)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/api/v1/resourcesyncs/{name}", wrapper.PatchResourceSync)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/api/v1/resourcesyncs/{name}", wrapper.ReplaceResourceSync)
@@ -2768,6 +2842,51 @@ func (response ReadFleet404JSONResponse) VisitReadFleetResponse(w http.ResponseW
 	return json.NewEncoder(w).Encode(response)
 }
 
+type PatchFleetRequestObject struct {
+	Name string `json:"name"`
+	Body *PatchFleetApplicationJSONPatchPlusJSONRequestBody
+}
+
+type PatchFleetResponseObject interface {
+	VisitPatchFleetResponse(w http.ResponseWriter) error
+}
+
+type PatchFleet200JSONResponse Fleet
+
+func (response PatchFleet200JSONResponse) VisitPatchFleetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchFleet400JSONResponse Error
+
+func (response PatchFleet400JSONResponse) VisitPatchFleetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchFleet401JSONResponse Error
+
+func (response PatchFleet401JSONResponse) VisitPatchFleetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchFleet404JSONResponse Error
+
+func (response PatchFleet404JSONResponse) VisitPatchFleetResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ReplaceFleetRequestObject struct {
 	Name string `json:"name"`
 	Body *ReplaceFleetJSONRequestBody
@@ -3304,6 +3423,51 @@ func (response ReadResourceSync404JSONResponse) VisitReadResourceSyncResponse(w 
 	return json.NewEncoder(w).Encode(response)
 }
 
+type PatchResourceSyncRequestObject struct {
+	Name string `json:"name"`
+	Body *PatchResourceSyncApplicationJSONPatchPlusJSONRequestBody
+}
+
+type PatchResourceSyncResponseObject interface {
+	VisitPatchResourceSyncResponse(w http.ResponseWriter) error
+}
+
+type PatchResourceSync200JSONResponse ResourceSync
+
+func (response PatchResourceSync200JSONResponse) VisitPatchResourceSyncResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchResourceSync400JSONResponse Error
+
+func (response PatchResourceSync400JSONResponse) VisitPatchResourceSyncResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchResourceSync401JSONResponse Error
+
+func (response PatchResourceSync401JSONResponse) VisitPatchResourceSyncResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchResourceSync404JSONResponse Error
+
+func (response PatchResourceSync404JSONResponse) VisitPatchResourceSyncResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ReplaceResourceSyncRequestObject struct {
 	Name string `json:"name"`
 	Body *ReplaceResourceSyncJSONRequestBody
@@ -3541,6 +3705,9 @@ type StrictServerInterface interface {
 	// (GET /api/v1/fleets/{name})
 	ReadFleet(ctx context.Context, request ReadFleetRequestObject) (ReadFleetResponseObject, error)
 
+	// (PATCH /api/v1/fleets/{name})
+	PatchFleet(ctx context.Context, request PatchFleetRequestObject) (PatchFleetResponseObject, error)
+
 	// (PUT /api/v1/fleets/{name})
 	ReplaceFleet(ctx context.Context, request ReplaceFleetRequestObject) (ReplaceFleetResponseObject, error)
 
@@ -3582,6 +3749,9 @@ type StrictServerInterface interface {
 
 	// (GET /api/v1/resourcesyncs/{name})
 	ReadResourceSync(ctx context.Context, request ReadResourceSyncRequestObject) (ReadResourceSyncResponseObject, error)
+
+	// (PATCH /api/v1/resourcesyncs/{name})
+	PatchResourceSync(ctx context.Context, request PatchResourceSyncRequestObject) (PatchResourceSyncResponseObject, error)
 
 	// (PUT /api/v1/resourcesyncs/{name})
 	ReplaceResourceSync(ctx context.Context, request ReplaceResourceSyncRequestObject) (ReplaceResourceSyncResponseObject, error)
@@ -4322,6 +4492,39 @@ func (sh *strictHandler) ReadFleet(w http.ResponseWriter, r *http.Request, name 
 	}
 }
 
+// PatchFleet operation middleware
+func (sh *strictHandler) PatchFleet(w http.ResponseWriter, r *http.Request, name string) {
+	var request PatchFleetRequestObject
+
+	request.Name = name
+
+	var body PatchFleetApplicationJSONPatchPlusJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchFleet(ctx, request.(PatchFleetRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchFleet")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchFleetResponseObject); ok {
+		if err := validResponse.VisitPatchFleetResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ReplaceFleet operation middleware
 func (sh *strictHandler) ReplaceFleet(w http.ResponseWriter, r *http.Request, name string) {
 	var request ReplaceFleetRequestObject
@@ -4706,6 +4909,39 @@ func (sh *strictHandler) ReadResourceSync(w http.ResponseWriter, r *http.Request
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(ReadResourceSyncResponseObject); ok {
 		if err := validResponse.VisitReadResourceSyncResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PatchResourceSync operation middleware
+func (sh *strictHandler) PatchResourceSync(w http.ResponseWriter, r *http.Request, name string) {
+	var request PatchResourceSyncRequestObject
+
+	request.Name = name
+
+	var body PatchResourceSyncApplicationJSONPatchPlusJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PatchResourceSync(ctx, request.(PatchResourceSyncRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PatchResourceSync")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PatchResourceSyncResponseObject); ok {
+		if err := validResponse.VisitPatchResourceSyncResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
