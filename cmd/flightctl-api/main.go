@@ -71,7 +71,7 @@ func main() {
 		log.Fatalf("ensuring flightctl-admin client cert: %v", err)
 	}
 	// also write out a client config file
-	err = client.WriteConfig(config.ClientConfigFile(), cfg.Service.BaseUrl, "", ca.Config, adminCert)
+	err = client.WriteConfig(config.ClientConfigFile(), *cfg, "", ca.Config, adminCert)
 	if err != nil {
 		log.Fatalf("writing client config: %v", err)
 	}

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	apiclient "github.com/flightctl/flightctl/internal/api/client"
+	"github.com/flightctl/flightctl/internal/config"
 	"github.com/flightctl/flightctl/internal/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -126,7 +127,9 @@ func TestClientConfig(t *testing.T) {
 			require.NoError(err)
 
 			// write client config to disk
-			err = WriteConfig(configFile, tt.server, tt.serverName, ca.Config, clientCert)
+			cfg := config.NewDefault()
+			cfg.Service.BaseUrl = tt.server
+			err = WriteConfig(configFile, *cfg, tt.serverName, ca.Config, clientCert)
 			require.NoError(err)
 
 			// read client config from disk and create API client from it

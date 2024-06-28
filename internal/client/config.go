@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 
 	"github.com/flightctl/flightctl/internal/api/client"
+	"github.com/flightctl/flightctl/internal/auth/authn"
+	"github.com/flightctl/flightctl/internal/config"
 	"github.com/flightctl/flightctl/internal/crypto"
 	"github.com/flightctl/flightctl/pkg/reqid"
 	"github.com/go-chi/chi/middleware"
@@ -52,6 +54,16 @@ type Service struct {
 	CertificateAuthorityData []byte `json:"certificate-authority-data,omitempty"`
 }
 
+type K8sAuth struct {
+	ApiURL string `json:"apiUrl,omitempty"`
+	Token  string `json:"token,omitempty" datapolicy:"security-key"`
+}
+
+type OIDCAuth struct {
+	AuthURL string `json:"authURL,omitempty"`
+	Token   string `json:"token,omitempty" datapolicy:"security-key"`
+}
+
 // AuthInfo contains information for authenticating FlightCtl API clients.
 type AuthInfo struct {
 	// ClientCertificate is the path to a client cert file for TLS.
@@ -65,7 +77,8 @@ type AuthInfo struct {
 	ClientKey string `json:"client-key,omitempty"`
 	// ClientKeyData contains PEM-encoded data from a client key file for TLS. Overrides ClientKey.
 	// +optional
-	ClientKeyData []byte `json:"client-key-data,omitempty" datapolicy:"security-key"`
+	ClientKeyData []byte   `json:"client-key-data,omitempty" datapolicy:"security-key"`
+	K8sAuth       *K8sAuth `json:"k8sAuth,omitempty"`
 }
 
 func (c *Config) Equal(c2 *Config) bool {
@@ -169,6 +182,12 @@ func NewFromConfig(config *Config) (*client.ClientWithResponses, error) {
 	}
 	ref := client.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
 		req.Header.Set(middleware.RequestIDHeader, reqid.GetReqID())
+		if config.AuthInfo.K8sAuth != nil {
+			if config.AuthInfo.K8sAuth.Token == "" {
+				return errors.New("you must be logged in to the server (Unauthorized)")
+			}
+			req.Header.Set(authn.K8sAuthHeader, fmt.Sprintf("Bearer %s", config.AuthInfo.K8sAuth.Token))
+		}
 		return nil
 	})
 	return client.NewClientWithResponses(config.Service.Server, client.WithHTTPClient(httpClient), ref)
@@ -218,8 +237,7 @@ func DefaultFlightctlClientConfigPath() string {
 	return filepath.Join(homedir.HomeDir(), ".flightctl", "client.yaml")
 }
 
-// NewFromConfigFile returns a new FlightCtl API client using the config read from the given file.
-func NewFromConfigFile(filename string) (*client.ClientWithResponses, error) {
+func ParseConfigFile(filename string) (*Config, error) {
 	contents, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("reading config: %v", err)
@@ -232,35 +250,53 @@ func NewFromConfigFile(filename string) (*client.ClientWithResponses, error) {
 	if err := config.Validate(); err != nil {
 		return nil, err
 	}
-	if err := config.Flatten(); err != nil {
+	return config, config.Flatten()
+}
+
+// NewFromConfigFile returns a new FlightCtl API client using the config read from the given file.
+func NewFromConfigFile(filename string) (*client.ClientWithResponses, error) {
+	config, err := ParseConfigFile(filename)
+	if err != nil {
 		return nil, err
 	}
 	return NewFromConfig(config)
 }
 
 // WriteConfig writes a client config file using the given parameters.
-func WriteConfig(filename string, server string, tlsServerName string, ca *crypto.TLSCertificateConfig, client *crypto.TLSCertificateConfig) error {
+func WriteConfig(filename string, cfg config.Config, tlsServerName string, ca *crypto.TLSCertificateConfig, client *crypto.TLSCertificateConfig) error {
 	caCertPEM, _, err := ca.GetPEMBytes()
 	if err != nil {
 		return fmt.Errorf("PEM-encoding CA certs: %v", err)
 	}
+
 	clientCertPEM, clientKeyPEM, err := client.GetPEMBytes()
 	if err != nil {
 		return fmt.Errorf("PEM-encoding client cert and key: %v", err)
 	}
-
-	config := NewDefault()
-	config.Service = Service{
-		Server:                   server,
-		TLSServerName:            tlsServerName,
-		CertificateAuthorityData: caCertPEM,
-	}
-	config.AuthInfo = AuthInfo{
+	auth := AuthInfo{
 		ClientCertificateData: clientCertPEM,
 		ClientKeyData:         clientKeyPEM,
 	}
+	if cfg.Auth != nil && cfg.Auth.K8sApiUrl != "" {
+		auth.K8sAuth = &K8sAuth{
+			ApiURL: cfg.Auth.K8sApiUrl,
+		}
+	}
 
-	contents, err := yaml.Marshal(config)
+	config := NewDefault()
+	config.Service = Service{
+		Server:                   cfg.Service.BaseUrl,
+		TLSServerName:            tlsServerName,
+		CertificateAuthorityData: caCertPEM,
+	}
+
+	config.AuthInfo = auth
+
+	return config.Persist(filename)
+}
+
+func (c *Config) Persist(filename string) error {
+	contents, err := yaml.Marshal(c)
 	if err != nil {
 		return fmt.Errorf("encoding config: %v", err)
 	}

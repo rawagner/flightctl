@@ -10,11 +10,14 @@ type K8sAuthN struct{}
 
 type ctxKeyAuthHeader string
 
-const K8sTokenKey ctxKeyAuthHeader = "k8s-token"
+const (
+	K8sTokenKey   ctxKeyAuthHeader = "k8s-token"
+	K8sAuthHeader string           = "Authorization"
+)
 
 func (k8s K8sAuthN) AuthHandler(next http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
+		authHeader := r.Header.Get(K8sAuthHeader)
 		if authHeader == "" {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
