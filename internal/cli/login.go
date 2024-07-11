@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -31,7 +32,7 @@ func NewCmdLogin() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "login [URL] --token TOKEN",
 		Short: "Login to flight control",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := o.Complete(cmd, args); err != nil {
 				return err
@@ -65,6 +66,12 @@ func (o *LoginOptions) Validate(args []string) error {
 	if err := o.GlobalOptions.Validate(args); err != nil {
 		return err
 	}
+
+	if _, err := os.Stat(o.ConfigFilePath); errors.Is(err, os.ErrNotExist) {
+		if len(args) == 0 {
+			return errors.New("API URL must be specified")
+		}
+	}
 	return nil
 }
 
@@ -73,17 +80,27 @@ type OauthServerResponse struct {
 }
 
 func (o *LoginOptions) Run(ctx context.Context, args []string) error {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-	configFilePath := filepath.Join(homeDir, ".flightctl", "client.yaml")
-	config, err := client.ParseConfigFile(configFilePath)
-	if err != nil {
-		return err
+	var config *client.Config
+	if _, err := os.Stat(o.ConfigFilePath); errors.Is(err, os.ErrNotExist) {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return err
+		}
+		configFilePath := filepath.Join(homeDir, ".flightctl", "client.yaml")
+		config, err = client.ParseConfigFile(configFilePath)
+		if err != nil {
+			return err
+		}
+	} else {
+		config, err = client.ParseConfigFile(o.ConfigFilePath)
+		if err != nil {
+			return err
+		}
 	}
 
-	config.Service.Server = args[0]
+	if len(args) == 1 {
+		config.Service.Server = args[0]
+	}
 
 	httpClient, err := client.NewHTTPClientFromConfig(config)
 	if err != nil {
