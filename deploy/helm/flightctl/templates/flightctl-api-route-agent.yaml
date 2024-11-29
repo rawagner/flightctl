@@ -11,7 +11,9 @@ metadata:
   name: flightctl-api-route-agent
   namespace: {{ .Release.Namespace }}
 spec:
+  {{- if not (eq .Values.global.target "acm") }}
   host: agent-api.{{ include "flightctl.getBaseDomain" . }}
+  {{- end }}
   port:
     targetPort: 7443
   tls:

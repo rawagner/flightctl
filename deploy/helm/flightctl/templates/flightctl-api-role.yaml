@@ -1,0 +1,13 @@
+{{ if eq .Values.global.target "acm" }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    flightctl.service: flightctl-api
+  name: flightctl-api
+  namespace: {{ .Release.Namespace }}
+rules:
+  - apiGroups: ["route.openshift.io"]
+    resources: ["routes"]
+    verbs: ["get"]
+{{ end }}

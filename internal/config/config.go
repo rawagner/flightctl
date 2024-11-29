@@ -1,10 +1,16 @@
 package config
 
 import (
+	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/flightctl/flightctl/internal/util"
 	"sigs.k8s.io/yaml"
@@ -12,6 +18,10 @@ import (
 
 const (
 	appName = "flightctl"
+
+	k8sCACertPath = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	saTokenPath   = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	nsPath        = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
 )
 
 type Config struct {
@@ -130,6 +140,7 @@ func NewFromFile(cfgFile string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	loadClusterDetails(cfg)
 	if err := Validate(cfg); err != nil {
 		return nil, err
 	}
@@ -181,4 +192,100 @@ func (cfg *Config) String() string {
 		return "<error>"
 	}
 	return string(contents)
+}
+
+type InfrastructureCR struct {
+	Status struct {
+		URL string `json:"apiServerURL"`
+	} `json:"status"`
+}
+
+type Route struct {
+	Spec struct {
+		Host string `json:"host"`
+	} `json:"spec"`
+}
+
+func fetchFromCluster(path string) ([]byte, error) {
+	tlsConfig := &tls.Config{}
+	_, err := os.Stat(k8sCACertPath)
+	if err == nil {
+		k8sCert, err := os.ReadFile(k8sCACertPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read k8s ca.crt: %w", err)
+		}
+		if tlsConfig.RootCAs == nil {
+			tlsConfig.RootCAs = x509.NewCertPool()
+		}
+		tlsConfig.RootCAs.AppendCertsFromPEM(k8sCert)
+	}
+	client := &http.Client{Transport: &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}}
+
+	token, err := os.ReadFile(saTokenPath)
+	if err != nil {
+		return nil, fmt.Errorf("reading token file: %v", err)
+	}
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, fmt.Sprintf("https://kubernetes.default.svc/apis/%s", path), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header = map[string][]string{
+		"Authorization": {"Bearer " + string(token)},
+		"Content-Type":  {"application/json"},
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	return io.ReadAll(res.Body)
+
+}
+
+func loadClusterDetails(cfg *Config) error {
+	if _, err := os.Stat(saTokenPath); err == nil {
+		resp, err := fetchFromCluster("config.openshift.io/v1/infrastructures/cluster")
+		if err != nil {
+			return err
+		}
+
+		infrastructure := &InfrastructureCR{}
+		if err := yaml.Unmarshal(resp, infrastructure); err != nil {
+			return fmt.Errorf("decoding infrastructure cr: %v", err)
+		}
+
+		cfg.Auth.OpenShiftApiUrl = infrastructure.Status.URL
+
+		ns, err := os.ReadFile(nsPath)
+		if err != nil {
+			return fmt.Errorf("failed to read ns: %v", err)
+		}
+		nsStr := string(ns)
+		resp, err = fetchFromCluster(fmt.Sprintf("route.openshift.io/v1/namespaces/%s/routes/flightctl-api-route", nsStr))
+		if err != nil {
+			return err
+		}
+
+		routeCr := &Route{}
+		if err := yaml.Unmarshal(resp, routeCr); err != nil {
+			return fmt.Errorf("decoding route: %v", err)
+		}
+
+		appsDomain, _ := strings.CutPrefix(routeCr.Spec.Host, fmt.Sprintf("flightctl-api-route-%s.", nsStr))
+
+		cfg.Service.AltNames = append(
+			cfg.Service.AltNames,
+			routeCr.Spec.Host,
+			fmt.Sprintf("flightctl-api-route-agent-%s.%s", nsStr, appsDomain),
+			fmt.Sprintf("flightctl-api-route-agent-grpc-%s.%s", nsStr, appsDomain),
+		)
+		cfg.Service.BaseUrl = fmt.Sprintf("https://%s", routeCr.Spec.Host)
+		cfg.Service.BaseAgentEndpointUrl = fmt.Sprintf("https://flightctl-api-route-agent-%s.%s", nsStr, appsDomain)
+		cfg.Service.BaseAgentGrpcUrl = fmt.Sprintf("grpcs://flightctl-api-route-agent-grpc-%s.%s", nsStr, appsDomain)
+		cfg.Service.BaseUIUrl = fmt.Sprintf("https://console-openshift-console.%s", appsDomain)
+	}
+	return nil
 }
