@@ -1,19 +1,16 @@
 package authz
 
 import (
-	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
-	"io"
 	"net/http"
 
+	"github.com/flightctl/flightctl/internal/k8s"
 	k8sAuthorizationV1 "k8s.io/api/authorization/v1"
 )
 
 type K8sAuthZ struct {
-	ApiUrl          string
-	ClientTlsConfig *tls.Config
+	K8sClient *k8s.K8sClient
 }
 
 func createSSAR(resource string, verb string) ([]byte, error) {
@@ -35,36 +32,18 @@ func (k8sAuth K8sAuthZ) CheckPermission(ctx context.Context, k8sToken string, re
 		return false, err
 	}
 
-	ssarUrl := k8sAuth.ApiUrl + "/apis/authorization.k8s.io/v1/selfsubjectaccessreviews"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ssarUrl, bytes.NewReader(body))
-	if err != nil {
+	res, err := k8sAuth.K8sClient.Post(
+		ctx,
+		"/apis/authorization.k8s.io/v1/selfsubjectaccessreviews",
+		body,
+		k8s.WithToken(k8sToken),
+	)
+	if err != nil || res.StatusCode != http.StatusCreated {
 		return false, err
 	}
 
-	req.Header = map[string][]string{
-		"Authorization": {"Bearer " + k8sToken},
-		"Content-Type":  {"application/json"},
-	}
-
-	client := &http.Client{Transport: &http.Transport{
-		TLSClientConfig: k8sAuth.ClientTlsConfig,
-	}}
-	res, err := client.Do(req)
-	if err != nil {
-		return false, err
-	}
-
-	if res.StatusCode != 201 {
-		return false, nil
-	}
-
-	ssar := k8sAuthorizationV1.SelfSubjectAccessReview{}
-
-	bodyBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return false, err
-	}
-	if err := json.Unmarshal(bodyBytes, &ssar); err != nil {
+	ssar := &k8sAuthorizationV1.SelfSubjectAccessReview{}
+	if err := k8s.ParseResponse(res, ssar); err != nil {
 		return false, err
 	}
 	return ssar.Status.Allowed, nil
