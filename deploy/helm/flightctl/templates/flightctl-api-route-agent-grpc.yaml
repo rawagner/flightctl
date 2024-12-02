@@ -11,7 +11,9 @@ metadata:
   name: flightctl-api-route-agent-grpc
   namespace: {{ .Release.Namespace }}
 spec:
+  {{- if or (not (eq .Values.global.target "acm")) .Values.global.baseDomain  }}
   host: agent-grpc.{{ include "flightctl.getBaseDomain" . }}
+  {{- end  }}
   port:
     targetPort: 7444
   tls:

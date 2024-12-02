@@ -14,9 +14,11 @@ data:
         user: {{ .Values.db.masterUser }}
         password: {{ .Values.db.masterPassword }}   # we should funnel this via secrets instead
     service:
+        targetPlatform: {{ .Values.global.target }}
         address: :3443
         agentEndpointAddress: :7443
         agentGrpcAddress: :7444
+        {{- if or (not (eq .Values.global.target "acm")) .Values.global.baseDomain  }}
         {{- if eq (include "flightctl.getServiceExposeMethod" .) "nodePort" }}
         baseUrl: https://api.{{ include "flightctl.getBaseDomain" . }}:{{ .Values.global.nodePorts.api }}/
         baseAgentEndpointUrl: https://agent-api.{{ include "flightctl.getBaseDomain" . }}:{{ .Values.global.nodePorts.agent }}/
@@ -31,10 +33,13 @@ data:
         baseAgentGrpcUrl: grpcs://agent-grpc.{{ include "flightctl.getBaseDomain" . }}
         {{- end }}
         baseUIUrl: {{ include "flightctl.getUIUrl" . }}
+        {{- end }}
         altNames:
+          {{- if or (not (eq .Values.global.target "acm")) .Values.global.baseDomain  }}  
           - api.{{ include "flightctl.getBaseDomain" . }}
           - agent-api.{{ include "flightctl.getBaseDomain" . }}
           - agent-grpc.{{ include "flightctl.getBaseDomain" . }}
+          {{- end }}
           - flightctl-api
           - flightctl-api.{{ .Release.Namespace }}
           - flightctl-api.{{ .Release.Namespace }}.svc.cluster.local
@@ -53,7 +58,7 @@ data:
         {{- if or (eq .Values.global.target "acm") (eq .Values.global.auth.type "k8s")  }}
         k8s:
             apiUrl: {{ .Values.global.auth.k8s.apiUrl }}
-            externalOpenshiftApiUrl: {{ include "flightctl.getOpenShiftAPIUrl" . }}
+            externalOpenshiftApiUrl: {{ .Values.global.auth.k8s.externalOpenShiftApiUrl }}
         {{- else }}
         oidc:
             oidcAuthority: {{ .Values.global.auth.oidc.oidcAuthority }}

@@ -9,4 +9,7 @@ rules:
   - apiGroups: ["authentication.k8s.io"]
     resources: ["tokenreviews"]
     verbs: ["create"]
+  - apiGroups: ["config.openshift.io"]
+    resources: ["infrastructures"]
+    verbs: ["get"]
 {{ end }}

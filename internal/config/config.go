@@ -1,11 +1,14 @@
 package config
 
 import (
+	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/flightctl/flightctl/internal/k8s"
 	"github.com/flightctl/flightctl/internal/util"
 	"sigs.k8s.io/yaml"
 )
@@ -47,6 +50,7 @@ type svcConfig struct {
 	SrvKeyFile           string   `json:"srvKeyFile,omitempty"`
 	AltNames             []string `json:"altNames,omitempty"`
 	LogLevel             string   `json:"logLevel,omitempty"`
+	TargetPlatform       string   `json:"targetPlatform,omitempty"`
 }
 
 type queueConfig struct {
@@ -138,6 +142,40 @@ func NewFromFile(cfgFile string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if cfg.Service.TargetPlatform == "acm" && cfg.Service.BaseUrl == "" {
+		tlsConfig := &tls.Config{}
+		k8sClient, err := k8s.NewK8sClient(k8s.ApiService, tlsConfig)
+		if err != nil {
+			return nil, err
+		}
+		clusterApi, err := k8s.LoadClusterApi(context.TODO(), k8sClient)
+		if err != nil {
+			return nil, err
+		}
+		cfg.Auth.K8s.ExternalOpenshiftApiUrl = clusterApi
+
+		ns, err := k8s.GetCurrentNs()
+		if err != nil {
+			return nil, err
+		}
+		appsDomain, err := k8s.LoadAppDomain(context.TODO(), k8sClient, ns)
+		if err != nil {
+			return nil, err
+		}
+
+		api := fmt.Sprintf("flightctl-api-route-%s.%s", ns, appsDomain)
+		agentApi := fmt.Sprintf("flightctl-api-route-agent-%s.%s", ns, appsDomain)
+		agentGrpc := fmt.Sprintf("flightctl-api-route-agent-grpc-%s.%s", ns, appsDomain)
+
+		cfg.Service.BaseUrl = fmt.Sprintf("https://%s", api)
+		cfg.Service.BaseAgentEndpointUrl = fmt.Sprintf("https://%s", agentApi)
+		cfg.Service.BaseAgentGrpcUrl = fmt.Sprintf("grpcs://%s", agentGrpc)
+		cfg.Service.BaseUIUrl = fmt.Sprintf("https://console-openshift-console.%s", appsDomain)
+
+		cfg.Service.AltNames = append(cfg.Service.AltNames, []string{api, agentApi, agentGrpc}...)
+	}
+
 	if err := Validate(cfg); err != nil {
 		return nil, err
 	}

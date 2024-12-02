@@ -11,15 +11,6 @@
   {{- end }}
 {{- end }}
 
-{{- define "flightctl.getOpenShiftAPIUrl" }}
-  {{- if .Values.global.auth.k8s.externalOpenShiftApiUrl }}
-    {{- printf .Values.global.auth.k8s.externalOpenShiftApiUrl }}
-  {{- else if eq .Values.global.target "acm" }}
-    {{- $openShiftApiUrl := (lookup "config.openshift.io/v1" "Infrastructure" "" "cluster").status.apiServerURL }}
-    {{- printf $openShiftApiUrl }}
-  {{- end }}
-{{- end }}
-
 {{- define "flightctl.getHttpScheme" }}
   {{- if or (or (eq .Values.global.target "acm") (eq .Values.global.exposeServicesMethod "route")) (.Values.global.baseDomainTls).cert }}
     {{- printf "https" }}

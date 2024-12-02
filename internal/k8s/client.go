@@ -13,10 +13,10 @@ import (
 )
 
 const (
-	saPath      = "/var/run/secrets/kubernetes.io/serviceaccount"
-	caCertPath  = saPath + "/ca.crt"
-	saTokenPath = saPath + "/token"
-	apiService  = "https://kubernetes.default.svc"
+	SaPath      = "/var/run/secrets/kubernetes.io/serviceaccount"
+	caCertPath  = SaPath + "/ca.crt"
+	saTokenPath = SaPath + "/token"
+	ApiService  = "https://kubernetes.default.svc"
 )
 
 type K8sClient struct {
@@ -26,7 +26,7 @@ type K8sClient struct {
 }
 
 func NewK8sClient(apiUrl string, tlsConfig *tls.Config) (*K8sClient, error) {
-	if apiUrl == apiService {
+	if apiUrl == ApiService {
 		_, err := os.Stat(caCertPath)
 		if err == nil {
 			k8sCert, err := os.ReadFile(caCertPath)
@@ -66,6 +66,20 @@ func (c *K8sClient) Post(ctx context.Context, resourcePath string, body []byte, 
 	return c.do(req, options...)
 }
 
+func (c *K8sClient) Get(ctx context.Context, resourcePath string, options ...Option) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		fmt.Sprintf("%s%s", c.apiUrl, resourcePath),
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.do(req, options...)
+}
+
 func (c *K8sClient) do(req *http.Request, options ...Option) (*http.Response, error) {
 	req.Header = map[string][]string{
 		"Authorization": {"Bearer " + c.token},
@@ -84,7 +98,6 @@ func ParseResponse(res *http.Response, resource any) error {
 	if err != nil {
 		return err
 	}
-
 	return json.Unmarshal(data, resource)
 }
 
