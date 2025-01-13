@@ -24,22 +24,42 @@ type GlobalOptions struct {
 
 func DefaultGlobalOptions() GlobalOptions {
 	return GlobalOptions{
-		ConfigFilePath: ConfigFilePath(""),
+		ConfigFilePath: "",
 		Context:        "",
 	}
 }
 
 func (o *GlobalOptions) Bind(fs *pflag.FlagSet) {
 	fs.StringVarP(&o.Context, "context", "c", o.Context, "Read client config from 'client_<context>.yaml' instead of 'client.yaml'.")
+	fs.StringVarP(&o.ConfigFilePath, "config-file", "", o.ConfigFilePath, "Path to client.yaml to use for CLI requests.")
+
 }
 
 func (o *GlobalOptions) Complete(cmd *cobra.Command, args []string) error {
-	o.ConfigFilePath = ConfigFilePath(o.Context)
+	if o.ConfigFilePath == "" {
+		o.ConfigFilePath = ConfigFilePath(o.Context)
+	} else {
+		o.Context = ""
+		if !filepath.IsAbs(o.ConfigFilePath) {
+			absPath, err := filepath.Abs(o.ConfigFilePath)
+			if err != nil {
+				return fmt.Errorf("failed converting '%s' to absolute path: %w", o.ConfigFilePath, err)
+			}
+			o.ConfigFilePath = absPath
+		}
+	}
 	return nil
 }
 
 func (o *GlobalOptions) Validate(args []string) error {
+	if o.Context != "" && o.ConfigFilePath != ConfigFilePath(o.Context) {
+		return fmt.Errorf("--context and --config-file are mutually exclusive")
+	}
 	if _, err := os.Stat(o.ConfigFilePath); errors.Is(err, os.ErrNotExist) {
+		if o.ConfigFilePath != ConfigFilePath("") {
+			// custom 'ConfigFilePath' was provided
+			return fmt.Errorf("specified client.yaml does not exist")
+		}
 		if o.Context != "" {
 			return fmt.Errorf("context '%s' does not exist", o.Context)
 		}
