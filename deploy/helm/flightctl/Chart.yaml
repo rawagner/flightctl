@@ -5,6 +5,10 @@ home: https://github.com/flightctl/flightctl
 type: application
 version: 0.1.0
 appVersion: "latest" # this is replaced at packaging with the hash of the image release
+kubeVersion: '>=1.32.0'
+icon: "https://raw.githubusercontent.com/flightctl/flightctl.github.io/refs/heads/main/static/img/flight-control-icon-full-color.png"
+annotations:
+  charts.openshift.io/name: Flight Control
 dependencies:
   - name: keycloak
     version: "0.0.1"
