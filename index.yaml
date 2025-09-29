@@ -1,0 +1,27 @@
+apiVersion: v1
+entries:
+  flightctl:
+  - annotations:
+      charts.openshift.io/name: Flight Control
+    apiVersion: v2
+    appVersion: latest
+    created: "2025-09-29T12:44:19.87396885+02:00"
+    dependencies:
+    - name: keycloak
+      repository: ""
+      version: 0.0.1
+    - condition: ui.enabled
+      name: ui
+      repository: ""
+      version: 0.0.1
+    description: A helm chart for flightctl
+    digest: f47194e88b9d8c82ebac466a14e058306492831ecea2cf2ff17c8e2f700cc1e5
+    home: https://github.com/flightctl/flightctl
+    icon: https://raw.githubusercontent.com/flightctl/flightctl.github.io/refs/heads/main/static/img/flight-control-icon-full-color.png
+    kubeVersion: '>=1.32.0'
+    name: flightctl
+    type: application
+    urls:
+    - https://rawagner.github.io/flightctl/flightctl-0.1.0.tgz
+    version: 0.1.0
+generated: "2025-09-29T12:44:19.87242568+02:00"
