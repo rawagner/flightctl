@@ -1,0 +1,14 @@
+apiVersion: v2
+name: {{ .Name }}
+description: {{ .Description }}
+home: {{ .Home }}
+type: application
+version: {{ .ChartVersion }}
+appVersion: {{ .AppVersion }}
+icon: {{ .Icon }}
+annotations:
+  charts.openshift.io/archs: x86_64
+  charts.openshift.io/name: {{ .Annotations.Name }}
+  charts.openshift.io/provider: {{ .Annotations.Provider }}
+  charts.openshift.io/supportURL: {{ .Annotations.SupportURL }}
+kubeVersion: '>= 1.29.0-0'
