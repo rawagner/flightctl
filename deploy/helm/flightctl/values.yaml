@@ -3,8 +3,10 @@
 # This section contains parameters common to all the components in the deployment, including sub-charts, ui charts, etc.
 
 global:
-  # -- The type of Flightctl to deploy - either 'standalone' or 'acm'.
-  target: "standalone" # standalone, acm, aap
+  # -- Enable OpenShift extensions - one of 'auto', 'true', 'false'.
+  enableOpenShiftExtensions: "auto"
+  # -- Enable MultiCluster Engine extensions - one of 'auto', 'true', 'false'.
+  enableMulticlusterExtensions: "auto"
   # -- Base domain to construct the FQDN for the service endpoints.
   baseDomain: ""
   baseDomainTls:
@@ -16,8 +18,6 @@ global:
 # storageClassName: standard
   # -- Name of the image pull secret for accessing private container registries
   imagePullSecretName: ""
-  # -- Alternative to global.auth.k8s.externalOpenShiftApiUrl with the same meaning, used by the multiclusterhub operator
-  apiUrl: "" # alternative to global.auth.k8s.externalOpenShiftApiUrl used by multiclusterhub operator
   auth:
     # -- Type of the auth to use. Can be one of 'k8s', 'oidc', 'builtin', 'aap', or 'none'
     # Note: 'builtin' is a legacy mode that translates to 'oidc' with PAM issuer automatically enabled
@@ -76,8 +76,8 @@ global:
   internalNamespace: ""
   # -- Allow flightctl-worker to access secrets at the cluster level for embedding in device configs
   clusterLevelSecretAccess: false
-  # -- How the Flight Control services should be exposed. Can be either nodePort or route
-  exposeServicesMethod: "route" # route, nodePort, gateway
+  # -- How the Flight Control services should be exposed. Can be one of 'nodePort', 'route', or 'gateway'
+  exposeServicesMethod: ""
   # -- Gateway API class name for gateway exposure method
   gatewayClass: ""
   nodePorts:
