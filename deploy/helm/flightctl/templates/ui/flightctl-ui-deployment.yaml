@@ -112,10 +112,6 @@ spec:
             items:
               - key: ca.crt
                 path: ca.crt
-              {{- if or ((.Values.global).auth).caCert .Values.ui.auth.caCert }}
-              - key: ca_auth.crt
-                path: ca_auth.crt
-              {{ end }}
         {{- if eq $enableMulticlusterExtensions "true" }}
         - name: flightctl-ui-serving-cert
           secret:

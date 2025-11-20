@@ -122,9 +122,7 @@ RATE_LIMIT_WINDOW=${RATE_LIMIT_WINDOW:-1m}
 RATE_LIMIT_AUTH_REQUESTS=${RATE_LIMIT_AUTH_REQUESTS:-20}
 RATE_LIMIT_AUTH_WINDOW=${RATE_LIMIT_AUTH_WINDOW:-1h}
 
-# Extract organizations enabled value (defaults to false if not configured)
-ORGANIZATIONS_ENABLED=$(extract_value "global.organizations.enabled" "$SERVICE_CONFIG_FILE")
-ORGANIZATIONS_ENABLED=${ORGANIZATIONS_ENABLED:-false}
+ORGANIZATIONS_ENABLED=true
 
 # Verify required values were found
 if [ -z "$BASE_DOMAIN" ]; then

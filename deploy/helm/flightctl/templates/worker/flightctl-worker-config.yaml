@@ -37,7 +37,7 @@ data:
         workerCollector:
             enabled: true
     {{ end }}
-    {{ if .Values.global.tracing.enabled }}
+    {{ if .Values.global.tracing }}
     tracing:
         enabled: true
         endpoint: {{ .Values.global.tracing.endpoint }}
