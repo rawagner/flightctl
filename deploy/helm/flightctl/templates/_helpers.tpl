@@ -280,10 +280,22 @@ Database hostname helper.
 Returns the database hostname, either from values or the default cluster service name.
 */}}
 {{- define "flightctl.dbHostname" }}
-{{- if eq .Values.db.external "enabled" -}}
-{{ .Values.db.hostname }}
-{{- else -}}
-{{- default (printf "flightctl-db.%s.svc.cluster.local" (default .Release.Namespace .Values.global.internalNamespace)) .Values.db.hostname }}
+{{- if eq .Values.db.type "external" }}
+  {{ .Values.db.external.hostname }}
+{{- else }}
+  {{- printf "flightctl-db.%s.svc.cluster.local" (default .Release.Namespace .Values.global.internalNamespace) }}
+{{- end }}
+{{- end }}
+
+{{/*
+Database port helper.
+Returns the database port, either from values or the default cluster service port.
+*/}}
+{{- define "flightctl.dbPort" }}
+{{- if eq .Values.db.type "external" }}
+  {{ .Values.db.external.port }}
+{{- else }}
+  {{- 5432 }}
 {{- end }}
 {{- end }}
 
@@ -323,60 +335,60 @@ Parameters:
   - name: DB_HOST
     value: "{{ include "flightctl.dbHostname" $context }}"
   - name: DB_PORT
-    value: "{{ $context.Values.db.port }}"
+    value: "{{ include "flightctl.dbPort" $context }}"
   - name: DB_NAME
     value: "{{ $context.Values.db.name }}"
   {{- if eq $userType "app" }}
   - name: DB_USER
     valueFrom:
       secretKeyRef:
-        name: flightctl-db-app-secret
+        name: {{ default "flightctl-db-app-secret" $context.Values.db.userSecret }}
         key: user
   - name: DB_PASSWORD
     valueFrom:
       secretKeyRef:
-        name: flightctl-db-app-secret
+        name: {{ default "flightctl-db-app-secret" $context.Values.db.userSecret }}
         key: userPassword
   {{- else if eq $userType "migration" }}
   - name: DB_USER
     valueFrom:
       secretKeyRef:
-        name: flightctl-db-migration-secret
+        name: {{ default "flightctl-db-migration-secret" $context.Values.db.migrationUserSecret }}
         key: migrationUser
   - name: DB_PASSWORD
     valueFrom:
       secretKeyRef:
-        name: flightctl-db-migration-secret
+        name: {{ default "flightctl-db-migration-secret" $context.Values.db.migrationUserSecret }}
         key: migrationPassword
   {{- else if eq $userType "admin" }}
   - name: DB_USER
     valueFrom:
       secretKeyRef:
-        name: flightctl-db-admin-secret
+        name: {{ default "flightctl-db-admin-secret" $context.Values.db.masterUserSecret }}
         key: masterUser
   - name: DB_PASSWORD
     valueFrom:
       secretKeyRef:
-        name: flightctl-db-admin-secret
+        name: {{ default "flightctl-db-admin-secret" $context.Values.db.masterUserSecret }}
         key: masterPassword
   {{- else }}
   {{- fail (printf "Invalid userType '%s'. Must be one of: app, migration, admin" $userType) }}
   {{- end }}
-  {{- if $context.Values.db.sslmode }}
+  {{- if eq $context.Values.db.type "external" }}
+  {{- if $context.Values.db.external.sslmode }}
   - name: DB_SSL_MODE
-    value: "{{ $context.Values.db.sslmode }}"
+    value: "{{ $context.Values.db.external.sslmode }}"
   {{- end }}
-  {{- if $context.Values.db.sslcert }}
+  {{- if $context.Values.db.external.sslSecret }}
   - name: DB_SSL_CERT
-    value: "{{ $context.Values.db.sslcert }}"
-  {{- end }}
-  {{- if $context.Values.db.sslkey }}
+    value: /etc/ssl/postgres/client-cert.pem
   - name: DB_SSL_KEY
-    value: "{{ $context.Values.db.sslkey }}"
+    value: /etc/ssl/postgres/client-key.pem
   {{- end }}
-  {{- if $context.Values.db.sslrootcert }}
+  {{- if $context.Values.db.external.sslConfigMap }}
   - name: DB_SSL_ROOT_CERT
-    value: "{{ $context.Values.db.sslrootcert }}"
+    value: /etc/ssl/postgres/ca-cert.pem
+  {{- end }}
   {{- end }}
   volumeMounts:
   {{- include "flightctl.dbSslVolumeMounts" $context | nindent 2 }}

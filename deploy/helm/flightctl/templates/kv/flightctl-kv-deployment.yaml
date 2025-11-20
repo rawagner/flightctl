@@ -63,7 +63,7 @@ spec:
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: flightctl-kv-secret
+                  name: {{ default "flightctl-kv-secret" .Values.kv.passwordSecret }}
                   key: password
           command:
             - "redis-server"
