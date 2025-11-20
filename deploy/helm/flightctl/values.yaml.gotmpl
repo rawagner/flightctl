@@ -106,9 +106,6 @@ global:
   generateSecrets: true
   # -- Image pull policy for all containers
   imagePullPolicy: IfNotPresent
-  rbac:
-    # -- Create RBAC resources (roles, bindings, service accounts)
-    create: true
   organizations:
     # -- Enable IDP-provided organizations support
     enabled: false
@@ -125,62 +122,51 @@ global:
 
 # -- Database Configuration
 db:
-  # -- Use external PostgreSQL database instead of deploying internal one
-  # external: Set to "enabled" to use external PostgreSQL database instead of deploying internal one
-  # When enabled, configure hostname, port, name, user credentials to point to your external database
-  external: "disabled"
-  # -- External database hostname (leave empty to use in-cluster PostgreSQL)
-  # hostname: <set to external DB host to override cluster default>
-  # -- Database port number
-  port: 5432
+  # -- Type of database to use. Can be 'internal' or 'external'. Only pgsql DB is supported.
+  type: "internal"
   # -- Database name for Flight Control
   name: "flightctl"
-  # -- Database type (currently only 'pgsql' is supported)
-  type: "pgsql"
-  # -- SSL mode for database connections (disable, allow, prefer, require, verify-ca, verify-full)
-  sslmode: ""
-  # -- ConfigMap containing CA certificate (automatically mounted at /etc/ssl/postgres/)
-  sslConfigMap: ""
-  # -- Secret containing client certificates (automatically mounted at /etc/ssl/postgres/)
-  sslSecret: ""
-  # Internal database deployment configuration (ignored when external: "enabled")
-  image:
-    # -- PostgreSQL container image
-    image: {{ .Images.db.Image }}
-    # -- PostgreSQL image tag
-    tag: "{{ .Images.db.Tag }}"
-    # -- Image pull policy for database container
-    pullPolicy: ""
-  # -- Database master/admin username
-  masterUser: admin
-  # -- Application database username
-  user: flightctl_app
-  # -- Database migration username
-  migrationUser: flightctl_migrator
-  # -- Master user password (leave empty for auto-generation)
-  # masterPassword: Leave empty to auto-generate secure password, or set to use a specific password.
-  masterPassword: ""
-  # -- Application user password (leave empty for auto-generation)
-  # userPassword: Leave empty to auto-generate secure password, or set to use a specific password.
-  userPassword: ""
-  # -- Migration user password (leave empty for auto-generation)
-  # migrationPassword: Leave empty to auto-generate secure password, or set to use a specific password.
-  migrationPassword: ""
-  # -- Maximum number of database connections
-  maxConnections: 200
-  storage:
-    # -- Persistent volume size for database storage
-    size: "60Gi"
-  resources:
-    requests:
-      # -- CPU resource requests for database pod
-      cpu: "512m"
-      # -- Memory resource requests for database pod
-      memory: "512Mi"
-  # -- File system group ID for database pod security context
-  fsGroup: ""
-  # -- Additional labels for DB PVCs.
-  additionalPVCLabels: null
+  # -- Database master/admin secret name containing username/password. If not provided, the secret will be generated
+  masterUserSecret: ""
+  # -- Database application user secret name containing username/password. If not provided, the secret will be generated
+  userSecret: ""
+  # -- Database migration user secret name containing username/password. If not provided, the secret will be generated
+  migrationUserSecret: ""
+  # -- Settings for internal DB
+  internal:
+    image:
+      # -- PostgreSQL container image
+      image: {{ .Images.db.Image }}
+      # -- PostgreSQL image tag
+      tag: "{{ .Images.db.Tag }}"
+      # -- Image pull policy for database container
+      pullPolicy: ""
+    # -- Maximum number of database connections
+    maxConnections: 200
+    storage:
+      # -- Persistent volume size for database storage
+      size: "60Gi"
+    resources:
+      requests:
+        # -- CPU resource requests for database pod
+        cpu: "512m"
+        # -- Memory resource requests for database pod
+        memory: "512Mi" 
+    # -- File system group ID for database pod security context
+    fsGroup: ""
+    # -- Additional labels for DB PVCs.
+    additionalPVCLabels: null
+  external:
+    # -- External database hostname
+    hostname: ""
+    # -- Database port number
+    port: 5432
+    # -- SSL mode for database connections (disable, allow, prefer, require, verify-ca, verify-full)
+    sslmode: ""
+    # -- ConfigMap containing CA certificate (automatically mounted at /etc/ssl/postgres/)
+    sslConfigMap: ""
+    # -- Secret containing client certificates (automatically mounted at /etc/ssl/postgres/)
+    sslSecret: ""
 
 # -- Key-Value Store Configuration
 kv:
@@ -193,9 +179,8 @@ kv:
     tag: "{{ .Images.kv.Tag}}"
     # -- Image pull policy for Redis container
     pullPolicy: ""
-  # -- Redis password (leave empty for auto-generation)
-  # password: Leave empty to auto-generate secure password, or set to use a specific password.
-  password: ""
+  # -- Secret containing password for Redis password (leave empty for auto-generation)
+  passwordSecret: ""
   # -- Redis log level (debug, verbose, notice, warning)
   loglevel: warning
   # -- File system group ID for Redis pod security context

@@ -227,29 +227,27 @@ For more detailed configuration options, see the [Values](#values) section below
 | clusterCli.image.image | string | `"quay.io/openshift/origin-cli"` | Cluster CLI container image |
 | clusterCli.image.pullPolicy | string | `""` | Image pull policy for cluster CLI container |
 | clusterCli.image.tag | string | `"4.20.0"` | Cluster CLI image tag |
-| db | object | `{"additionalPVCLabels":null,"external":"disabled","fsGroup":"","image":{"image":"quay.io/sclorg/postgresql-16-c9s","pullPolicy":"","tag":"20250214"},"masterPassword":"","masterUser":"admin","maxConnections":200,"migrationPassword":"","migrationUser":"flightctl_migrator","name":"flightctl","port":5432,"resources":{"requests":{"cpu":"512m","memory":"512Mi"}},"sslConfigMap":"","sslSecret":"","sslmode":"","storage":{"size":"60Gi"},"type":"pgsql","user":"flightctl_app","userPassword":""}` | Database Configuration |
-| db.additionalPVCLabels | string | `nil` | Additional labels for DB PVCs. |
-| db.external | string | `"disabled"` | Use external PostgreSQL database instead of deploying internal one external: Set to "enabled" to use external PostgreSQL database instead of deploying internal one When enabled, configure hostname, port, name, user credentials to point to your external database |
-| db.fsGroup | string | `""` | File system group ID for database pod security context |
-| db.image.image | string | `"quay.io/sclorg/postgresql-16-c9s"` | PostgreSQL container image |
-| db.image.pullPolicy | string | `""` | Image pull policy for database container |
-| db.image.tag | string | `"20250214"` | PostgreSQL image tag |
-| db.masterPassword | string | `""` | Master user password (leave empty for auto-generation) masterPassword: Leave empty to auto-generate secure password, or set to use a specific password. |
-| db.masterUser | string | `"admin"` | Database master/admin username |
-| db.maxConnections | int | `200` | Maximum number of database connections |
-| db.migrationPassword | string | `""` | Migration user password (leave empty for auto-generation) migrationPassword: Leave empty to auto-generate secure password, or set to use a specific password. |
-| db.migrationUser | string | `"flightctl_migrator"` | Database migration username |
+| db | object | `{"external":{"hostname":"","port":5432,"sslConfigMap":"","sslSecret":"","sslmode":""},"internal":{"additionalPVCLabels":null,"fsGroup":"","image":{"image":"quay.io/sclorg/postgresql-16-c9s","pullPolicy":"","tag":"20250214"},"maxConnections":200,"resources":{"requests":{"cpu":"512m","memory":"512Mi"}},"storage":{"size":"60Gi"}},"masterUserSecret":"","migrationUserSecret":"","name":"flightctl","type":"internal","userSecret":""}` | Database Configuration |
+| db.external.hostname | string | `""` | External database hostname |
+| db.external.port | int | `5432` | Database port number |
+| db.external.sslConfigMap | string | `""` | ConfigMap containing CA certificate (automatically mounted at /etc/ssl/postgres/) |
+| db.external.sslSecret | string | `""` | Secret containing client certificates (automatically mounted at /etc/ssl/postgres/) |
+| db.external.sslmode | string | `""` | SSL mode for database connections (disable, allow, prefer, require, verify-ca, verify-full) |
+| db.internal | object | `{"additionalPVCLabels":null,"fsGroup":"","image":{"image":"quay.io/sclorg/postgresql-16-c9s","pullPolicy":"","tag":"20250214"},"maxConnections":200,"resources":{"requests":{"cpu":"512m","memory":"512Mi"}},"storage":{"size":"60Gi"}}` | Settings for internal DB |
+| db.internal.additionalPVCLabels | string | `nil` | Additional labels for DB PVCs. |
+| db.internal.fsGroup | string | `""` | File system group ID for database pod security context |
+| db.internal.image.image | string | `"quay.io/sclorg/postgresql-16-c9s"` | PostgreSQL container image |
+| db.internal.image.pullPolicy | string | `""` | Image pull policy for database container |
+| db.internal.image.tag | string | `"20250214"` | PostgreSQL image tag |
+| db.internal.maxConnections | int | `200` | Maximum number of database connections |
+| db.internal.resources.requests.cpu | string | `"512m"` | CPU resource requests for database pod |
+| db.internal.resources.requests.memory | string | `"512Mi"` | Memory resource requests for database pod |
+| db.internal.storage.size | string | `"60Gi"` | Persistent volume size for database storage |
+| db.masterUserSecret | string | `""` | Database master/admin secret name containing username/password. If not provided, the secret will be generated |
+| db.migrationUserSecret | string | `""` | Database migration user secret name containing username/password. If not provided, the secret will be generated |
 | db.name | string | `"flightctl"` | Database name for Flight Control |
-| db.port | int | `5432` | Database port number |
-| db.resources.requests.cpu | string | `"512m"` | CPU resource requests for database pod |
-| db.resources.requests.memory | string | `"512Mi"` | Memory resource requests for database pod |
-| db.sslConfigMap | string | `""` | ConfigMap containing CA certificate (automatically mounted at /etc/ssl/postgres/) |
-| db.sslSecret | string | `""` | Secret containing client certificates (automatically mounted at /etc/ssl/postgres/) |
-| db.sslmode | string | `""` | SSL mode for database connections (disable, allow, prefer, require, verify-ca, verify-full) |
-| db.storage.size | string | `"60Gi"` | Persistent volume size for database storage |
-| db.type | string | `"pgsql"` | Database type (currently only 'pgsql' is supported) |
-| db.user | string | `"flightctl_app"` | Application database username |
-| db.userPassword | string | `""` | Application user password (leave empty for auto-generation) userPassword: Leave empty to auto-generate secure password, or set to use a specific password. |
+| db.type | string | `"internal"` | Type of database to use. Can be 'internal' or 'external'. Only pgsql DB is supported. |
+| db.userSecret | string | `""` | Database application user secret name containing username/password. If not provided, the secret will be generated |
 | dbSetup | object | `{"image":{"image":"quay.io/flightctl/flightctl-db-setup","pullPolicy":"","tag":""},"migration":{"activeDeadlineSeconds":0,"backoffLimit":2147483647},"wait":{"sleep":2,"timeout":60}}` | Database Setup Configuration |
 | dbSetup.image.image | string | `"quay.io/flightctl/flightctl-db-setup"` | Database setup container image |
 | dbSetup.image.pullPolicy | string | `""` | Image pull policy for database setup container |
@@ -300,12 +298,11 @@ For more detailed configuration options, see the [Values](#values) section below
 | global.internalNamespace | string | `""` | Namespace where internal components are deployed |
 | global.metrics.enabled | bool | `true` | Enable metrics exporting and service |
 | global.organizations.enabled | bool | `false` | Enable IDP-provided organizations support |
-| global.rbac.create | bool | `true` | Create RBAC resources (roles, bindings, service accounts) |
 | global.sshKnownHosts.data | string | `""` | SSH known hosts file content for Git repository host key verification. |
 | global.tracing.enabled | bool | `false` | Enable distributed tracing with OpenTelemetry |
 | global.tracing.endpoint | string | `"jaeger-collector.flightctl-e2e.svc.cluster.local:4318"` | OpenTelemetry collector endpoint for trace data |
 | global.tracing.insecure | bool | `true` | Use insecure connection to tracing endpoint (development only) |
-| kv | object | `{"enabled":true,"fsGroup":"","image":{"image":"quay.io/sclorg/redis-7-c9s","pullPolicy":"","tag":"20250108"},"loglevel":"warning","maxmemory":"1gb","maxmemoryPolicy":"allkeys-lru","password":""}` | Key-Value Store Configuration |
+| kv | object | `{"enabled":true,"fsGroup":"","image":{"image":"quay.io/sclorg/redis-7-c9s","pullPolicy":"","tag":"20250108"},"loglevel":"warning","maxmemory":"1gb","maxmemoryPolicy":"allkeys-lru","passwordSecret":""}` | Key-Value Store Configuration |
 | kv.enabled | bool | `true` | Enable Redis key-value store for caching and session storage |
 | kv.fsGroup | string | `""` | File system group ID for Redis pod security context |
 | kv.image.image | string | `"quay.io/sclorg/redis-7-c9s"` | Redis container image |
@@ -314,7 +311,7 @@ For more detailed configuration options, see the [Values](#values) section below
 | kv.loglevel | string | `"warning"` | Redis log level (debug, verbose, notice, warning) |
 | kv.maxmemory | string | `"1gb"` | Maximum memory usage for Redis |
 | kv.maxmemoryPolicy | string | `"allkeys-lru"` | Redis memory eviction policy |
-| kv.password | string | `""` | Redis password (leave empty for auto-generation) password: Leave empty to auto-generate secure password, or set to use a specific password. |
+| kv.passwordSecret | string | `""` | Secret containing password for Redis password (leave empty for auto-generation) |
 | periodic | object | `{"consumers":5,"enabled":true,"image":{"image":"quay.io/flightctl/flightctl-periodic","pullPolicy":"","tag":""}}` | Periodic Configuration |
 | periodic.consumers | int | `5` | Number of periodic consumers |
 | periodic.enabled | bool | `true` | Enable Flight Control periodic service |

@@ -1,4 +1,4 @@
-{{- if ne .Values.db.external "enabled" }}
+{{- if eq .Values.db.type "internal" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
