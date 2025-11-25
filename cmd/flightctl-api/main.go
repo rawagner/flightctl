@@ -96,9 +96,16 @@ func main() {
 
 	clientCertFile := crypto.CertStorePath(cfg.CA.ClientBootstrapCertName+".crt", cfg.Service.CertStore)
 	clientKeyFile := crypto.CertStorePath(cfg.CA.ClientBootstrapCertName+".key", cfg.Service.CertStore)
-	_, _, err = ca.EnsureClientCertificate(ctx, clientCertFile, clientKeyFile, cfg.CA.ClientBootstrapCommonName, cfg.CA.ClientBootstrapValidityDays)
-	if err != nil {
-		log.Fatalf("ensuring bootstrap client cert: %v", err)
+	if canReadCertAndKey, _ := crypto.CanReadCertAndKey(clientCertFile, clientKeyFile); canReadCertAndKey {
+		_, err = crypto.GetTLSCertificateConfig(clientCertFile, clientKeyFile)
+		if err != nil {
+			log.Fatalf("failed to load existing client-enrollment certificate: %v", err)
+		}
+	} else {
+		_, _, err = ca.EnsureClientCertificate(ctx, clientCertFile, clientKeyFile, cfg.CA.ClientBootstrapCommonName, cfg.CA.ClientBootstrapValidityDays)
+		if err != nil {
+			log.Fatalf("ensuring bootstrap client cert: %v", err)
+		}
 	}
 
 	// also write out a client config file
