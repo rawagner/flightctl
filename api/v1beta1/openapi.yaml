@@ -18,6 +18,8 @@ tags:
     description: Operations for authentication.
   - name: authprovider
     description: Operations on AuthProvider resources.
+  - name: catalogitem
+    description: Operations on CatalogItem resources.
   - name: certificatesigningrequest
     description: Operations on CertificateSigningRequest resources.
   - name: device
@@ -4116,6 +4118,293 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Status'
+  /api/v1/catalogitems:
+    get:
+      tags:
+        - catalogitem
+      description: List CatalogItem resources.
+      operationId: listCatalogItems
+      parameters:
+        - name: continue
+          in: query
+          description: An optional parameter to query more results from the server. The value of the paramter must match the value of the 'continue' field in the previous list response.
+          required: false
+          schema:
+            type: string
+        - name: labelSelector
+          in: query
+          description: A selector to restrict the list of returned objects by their labels. Defaults to everything.
+          schema:
+            type: string
+        - name: fieldSelector
+          in: query
+          description: A selector to restrict the list of returned objects by their fields, supporting operators like '=', '==', and '!=' (e.g., "key1=value1,key2!=value2").
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: The maximum number of results returned in the list response. The server will set the 'continue' field in the list response if more results exist. The continue value may then be specified as parameter in a subsequent query.
+          required: false
+          schema:
+            type: integer
+            format: int32
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogItemList'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - catalogitem
+      description: Create a CatalogItem resource.
+      operationId: createCatalogItem
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogItem'
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogItem'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/catalogitems/{name}:
+    get:
+      tags:
+        - catalogitem
+      description: Get a CatalogItem resource.
+      operationId: getCatalogItem
+      parameters:
+        - name: name
+          in: path
+          description: The name of the CatalogItem resource to get.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogItem'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    delete:
+      tags:
+        - catalogitem
+      description: Delete a CatalogItem resource.
+      operationId: deleteCatalogItem
+      parameters:
+        - name: name
+          in: path
+          description: The name of the CatalogItem resource to delete.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    patch:
+      tags:
+        - catalogitem
+      description: Patch a CatalogItem resource.
+      operationId: patchCatalogItem
+      parameters:
+        - name: name
+          in: path
+          description: The name of the CatalogItem resource to patch.
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json-patch+json:
+            schema:
+              $ref: '#/components/schemas/PatchRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogItem'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
 components:
   securitySchemes:
     bearerAuth:
@@ -4130,8 +4419,249 @@ components:
   schemas:
     ResourceKind:
       type: string
-      enum: [CertificateSigningRequest, EnrollmentRequest, Device, Fleet, Repository, ResourceSync, TemplateVersion, AuthProvider]
+      enum: [CatalogItem, CertificateSigningRequest, EnrollmentRequest, Device, Fleet, Repository, ResourceSync, TemplateVersion, AuthProvider]
       description: Resource types exposed via the API.
+    CatalogItem:
+      type: object
+      properties:
+        apiVersion:
+          type: string
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources.'
+        kind:
+          type: string
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds.'
+        metadata:
+          $ref: '#/components/schemas/ObjectMeta'
+        spec:
+          $ref: '#/components/schemas/CatalogItemSpec'
+      required:
+        - apiVersion
+        - kind
+        - metadata
+        - spec
+      description: CatalogItem represents a catalog item with metadata for discovery and display.
+    CatalogItemType:
+      type: string
+      description: The type of the catalog item.
+      enum:
+        - os
+        - app
+        - volume
+      x-enum-varnames:
+        - CatalogItemTypeOS
+        - CatalogItemTypeApp
+        - CatalogItemTypeVolume
+    CatalogItemAppType:
+      type: string
+      description: The application subtype for catalog items of type 'app'.
+      enum:
+        - compose
+        - quadlet
+        - container
+      x-enum-varnames:
+        - CatalogItemAppTypeCompose
+        - CatalogItemAppTypeQuadlet
+        - CatalogItemAppTypeContainer
+    CatalogItemSpecBase:
+      type: object
+      description: Common properties for all catalog item specs.
+      properties:
+        shortDescription:
+          type: string
+          description: A short description of the catalog item.
+        description:
+          type: string
+          description: A detailed description of the catalog item.
+        version:
+          type: string
+          description: The version of the catalog item.
+        icon:
+          type: string
+          description: URL or data URI of the catalog item icon.
+        maintainer:
+          type: string
+          description: The maintainer or author of the catalog item.
+        homepage:
+          type: string
+          description: The homepage URL for the catalog item.
+    CatalogItemOSSpec:
+      allOf:
+        - $ref: '#/components/schemas/CatalogItemSpecBase'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum:
+                - os
+              description: The type of the catalog item.
+            image:
+              type: string
+              description: OCI image reference for the operating system.
+              example: "quay.io/flightctl/rhel-bootc:9.4"
+            rawImage:
+              type: string
+              description: Raw image that can be used to boot the edge device. For example, a QCOW2 image.
+          required:
+            - type
+            - image
+      description: CatalogItemOSSpec defines the specification for an OS catalog item.
+    CatalogItemApplicationSpec:
+      oneOf:
+        - $ref: '#/components/schemas/CatalogItemContainerAppSpec'
+        - $ref: '#/components/schemas/CatalogItemQuadletAppSpec'
+        - $ref: '#/components/schemas/CatalogItemComposeAppSpec'
+      discriminator:
+        propertyName: appType
+        mapping:
+          container: '#/components/schemas/CatalogItemContainerAppSpec'
+          quadlet: '#/components/schemas/CatalogItemQuadletAppSpec'
+          compose: '#/components/schemas/CatalogItemComposeAppSpec'
+      description: CatalogItemApplicationSpec defines the specification for an application catalog item.
+    CatalogItemAppSpecBase:
+      type: object
+      description: Common properties for all application catalog item specs.
+      properties:
+        type:
+          type: string
+          enum:
+            - app
+          description: The type of the catalog item.
+        image:
+          type: string
+          description: OCI image reference for the application.
+    CatalogItemContainerAppSpec:
+      allOf:
+        - $ref: '#/components/schemas/CatalogItemSpecBase'
+        - $ref: '#/components/schemas/CatalogItemAppSpecBase'
+        - type: object
+          properties:
+            appType:
+              type: string
+              enum:
+                - container
+              description: Container application type.
+            valuesSchema:
+              $ref: '#/components/schemas/CatalogItemValuesSchema'
+          required:
+            - type
+            - appType
+            - image
+      description: CatalogItemContainerAppSpec defines the specification for a container application catalog item.
+    CatalogItemQuadletAppSpec:
+      allOf:
+        - $ref: '#/components/schemas/CatalogItemSpecBase'
+        - $ref: '#/components/schemas/CatalogItemAppSpecBase'
+        - type: object
+          properties:
+            appType:
+              type: string
+              enum:
+                - quadlet
+              description: Quadlet application type.
+            valuesSchema:
+              $ref: '#/components/schemas/CatalogItemValuesSchema'
+          required:
+            - type
+            - appType
+            - image
+      description: CatalogItemQuadletAppSpec defines the specification for a quadlet application catalog item.
+    CatalogItemComposeAppSpec:
+      allOf:
+        - $ref: '#/components/schemas/CatalogItemSpecBase'
+        - $ref: '#/components/schemas/CatalogItemAppSpecBase'
+        - type: object
+          properties:
+            appType:
+              type: string
+              enum:
+                - compose
+              description: Compose application type.
+            valuesSchema:
+              $ref: '#/components/schemas/CatalogItemValuesSchema'
+          required:
+            - type
+            - appType
+            - image
+      description: CatalogItemComposeAppSpec defines the specification for a compose application catalog item.
+    CatalogItemValuesSchema:
+      type: object
+      additionalProperties: true
+      description: |
+        Schema defining configurable values for catalog item applications.
+        Supports any valid JSON Schema structure to specify which parameters 
+        users can configure and their validation rules.
+    CatalogItemVolumeSpec:
+      allOf:
+        - $ref: '#/components/schemas/CatalogItemSpecBase'
+        - type: object
+          properties:
+            type:
+              type: string
+              enum:
+                - volume
+              description: The type of the catalog item.
+            image:
+              type: string
+              description: OCI image or artifact reference containing the volume content.
+              example: "quay.io/flightctl/nginx-config:1.0.0"
+            pullPolicy:
+              $ref: '#/components/schemas/ImagePullPolicy'
+            mediaType:
+              type: string
+              description: |
+                The OCI media type of the artifact. Common types include:
+                - application/vnd.oci.image.layer.v1.tar+gzip (container filesystem layer)
+                - application/vnd.cncf.helm.config.v1+json (Helm chart)
+                - application/vnd.unknown.config.v1+json (generic artifact)
+              example: "application/vnd.oci.image.layer.v1.tar+gzip"
+            size:
+              type: integer
+              format: int64
+              description: Size of the artifact in bytes (informational).
+            digest:
+              type: string
+              description: |
+                The digest of the artifact for verification.
+                Format: algorithm:hex (e.g., sha256:abc123...)
+              example: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"
+          required:
+            - type
+            - image
+      description: CatalogItemVolumeSpec defines the specification for a volume/OCI artifact catalog item that can be mounted by applications.
+    CatalogItemSpec:
+      oneOf:
+        - $ref: '#/components/schemas/CatalogItemOSSpec'
+        - $ref: '#/components/schemas/CatalogItemApplicationSpec'
+        - $ref: '#/components/schemas/CatalogItemVolumeSpec'
+      discriminator:
+        propertyName: type
+        mapping:
+          os: '#/components/schemas/CatalogItemOSSpec'
+          app: '#/components/schemas/CatalogItemApplicationSpec'
+          volume: '#/components/schemas/CatalogItemVolumeSpec'
+      description: CatalogItemSpec defines the specification of a CatalogItem.
+    CatalogItemList:
+      type: object
+      properties:
+        apiVersion:
+          type: string
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources.'
+        kind:
+          type: string
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds.'
+        metadata:
+          $ref: '#/components/schemas/ListMeta'
+        items:
+          type: array
+          description: 'List of catalog items.'
+          items:
+            $ref: '#/components/schemas/CatalogItem'
+      description: CatalogItemList is a list of CatalogItems.
+      required:
+        - apiVersion
+        - kind
+        - metadata
+        - items
     DeviceDecommissionTargetType:
       type: string
       enum:
@@ -4690,6 +5220,7 @@ components:
             - $ref: "#/components/schemas/ImageVolumeProviderSpec"
             - $ref: "#/components/schemas/MountVolumeProviderSpec"
             - $ref: "#/components/schemas/ImageMountVolumeProviderSpec"
+            - $ref: "#/components/schemas/CatalogItemVolumeProviderSpec"
     ApplicationVolumeReclaimPolicy:
       type: string
       description: Defines how the agent handles a volume when the owning application is removed.
@@ -4747,6 +5278,35 @@ components:
       required:
         - image
         - mount
+    CatalogItemVolumeProviderSpec:
+      type: object
+      description: Volume sourced from a CatalogItem of type 'volume'.
+      properties:
+        catalogItem:
+          $ref: '#/components/schemas/CatalogItemVolumeReference'
+        mount:
+          $ref: '#/components/schemas/VolumeMount'
+      required:
+        - catalogItem
+        - mount
+    CatalogItemVolumeReference:
+      type: object
+      description: Reference to a CatalogItem of type 'volume'.
+      properties:
+        name:
+          type: string
+          description: The name of the CatalogItem (metadata.name) of type 'volume'.
+          example: "nginx-config"
+        version:
+          type: string
+          description: |
+            Optional semver version constraint. If not specified, the latest version is used.
+            Supports standard semver constraints: "1.2.3", "^1.0.0", "~1.2.0", ">=1.0.0 <2.0.0"
+          example: "^1.0.0"
+        pullPolicy:
+          $ref: '#/components/schemas/ImagePullPolicy'
+      required:
+        - name
     ApplicationContent:
         allOf:
           - $ref: '#/components/schemas/FileContent'
