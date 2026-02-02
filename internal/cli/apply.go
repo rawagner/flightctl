@@ -13,7 +13,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	api "github.com/flightctl/flightctl/api/core/v1beta1"
+	"github.com/flightctl/flightctl/api/versioning"
 	apiclient "github.com/flightctl/flightctl/internal/api/client"
+	apiclientv1alpha1 "github.com/flightctl/flightctl/internal/api/client/v1alpha1"
 	imagebuilderclient "github.com/flightctl/flightctl/internal/api/imagebuilder/client"
 	"github.com/flightctl/flightctl/internal/client"
 	"github.com/spf13/cobra"
@@ -21,9 +24,19 @@ import (
 	yamlutil "k8s.io/apimachinery/pkg/util/yaml"
 )
 
+const (
+	apiVersionPrefix = "flightctl.io/"
+)
+
 var (
 	fileExtensions  = []string{".json", ".yaml", ".yml"}
 	inputExtensions = append(fileExtensions, "stdin")
+
+	// alphaResources defines resource kinds that require v1alpha1 apiVersion.
+	alphaResources = map[ResourceKind]struct{}{
+		CatalogKind:     {},
+		CatalogItemKind: {},
+	}
 )
 
 type ApplyOptions struct {
@@ -123,7 +136,7 @@ func (o *ApplyOptions) Run(ctx context.Context, args []string) error {
 	for _, filename := range o.Filenames {
 		switch {
 		case filename == "-":
-			errs = append(errs, applyFromReader(ctx, c.ClientWithResponses, ibClient, "<stdin>", os.Stdin, o.DryRun)...)
+			errs = append(errs, applyFromReader(ctx, c, ibClient, "<stdin>", os.Stdin, o.DryRun)...)
 		default:
 			expandedFilenames, err := expandIfFilePattern(filename)
 			if err != nil {
@@ -161,7 +174,7 @@ func (o *ApplyOptions) Run(ctx context.Context, args []string) error {
 						return nil
 					}
 					defer r.Close()
-					errs = append(errs, applyFromReader(ctx, c.ClientWithResponses, ibClient, path, r, o.DryRun)...)
+					errs = append(errs, applyFromReader(ctx, c, ibClient, path, r, o.DryRun)...)
 					return nil
 				})
 				if err != nil {
@@ -182,7 +195,23 @@ type applyResult struct {
 	err          error
 }
 
-func applyFromReader(ctx context.Context, client *apiclient.ClientWithResponses, ibClient *client.ImageBuilderClient, filename string, r io.Reader, dryRun bool) []error {
+// validateResourceAPIVersion validates that the apiVersion in the resource
+// matches the expected version for the resource kind.
+func validateResourceAPIVersion(resource genericResource, kind ResourceKind) error {
+	apiVersion, _ := resource["apiVersion"].(string)
+
+	// Check if this is an alpha resource
+	if _, isAlpha := alphaResources[kind]; isAlpha {
+		expectedVersion := apiVersionPrefix + versioning.V1Alpha1
+		if apiVersion != expectedVersion {
+			return fmt.Errorf("%s requires apiVersion %q, got %q", kind, expectedVersion, apiVersion)
+		}
+	}
+
+	return nil
+}
+
+func applyFromReader(ctx context.Context, c *client.Client, ibClient *client.ImageBuilderClient, filename string, r io.Reader, dryRun bool) []error {
 	decoder := yamlutil.NewYAMLOrJSONDecoder(r, 100)
 	resources := []genericResource{}
 
@@ -201,14 +230,14 @@ func applyFromReader(ctx context.Context, client *apiclient.ClientWithResponses,
 
 	errs := make([]error, 0)
 	for _, resource := range resources {
-		if applyErr := applySingleResource(ctx, client, ibClient, filename, resource, dryRun); applyErr != nil {
+		if applyErr := applySingleResource(ctx, c, ibClient, filename, resource, dryRun); applyErr != nil {
 			errs = append(errs, applyErr...)
 		}
 	}
 	return errs
 }
 
-func applySingleResource(ctx context.Context, client *apiclient.ClientWithResponses, ibClient *client.ImageBuilderClient, filename string, resource genericResource, dryRun bool) []error {
+func applySingleResource(ctx context.Context, c *client.Client, ibClient *client.ImageBuilderClient, filename string, resource genericResource, dryRun bool) []error {
 	kindLike, ok := resource["kind"].(string)
 	if !ok {
 		return []error{fmt.Errorf("%s: skipping resource of unspecified kind: %v", filename, resource)}
@@ -222,6 +251,13 @@ func applySingleResource(ctx context.Context, client *apiclient.ClientWithRespon
 		return []error{fmt.Errorf("%s: skipping resource of unspecified resource name: %v", filename, resource)}
 	}
 
+	kind, _ := ResourceKindFromString(kindLike)
+
+	// Validate apiVersion matches expected version for the resource kind
+	if err := validateResourceAPIVersion(resource, kind); err != nil {
+		return []error{fmt.Errorf("%s: %w", filename, err)}
+	}
+
 	if dryRun {
 		fmt.Printf("%s: applying %s/%s (dry run only)\n", filename, strings.ToLower(kindLike), resourceName)
 		return nil
@@ -232,9 +268,7 @@ func applySingleResource(ctx context.Context, client *apiclient.ClientWithRespon
 	if err != nil {
 		return []error{fmt.Errorf("%s: skipping resource of kind %q: %w", filename, kindLike, err)}
 	}
-
-	kind, _ := ResourceKindFromString(kindLike)
-	result := applyResourceByKind(ctx, client, ibClient, kind, resourceName, buf)
+	result := applyResourceByKind(ctx, c, ibClient, kind, resourceName, buf)
 
 	var errs []error
 	if result.err != nil {
@@ -252,34 +286,33 @@ func applySingleResource(ctx context.Context, client *apiclient.ClientWithRespon
 	return errs
 }
 
-func applyResourceByKind(ctx context.Context, client *apiclient.ClientWithResponses, ibClient *client.ImageBuilderClient, kind ResourceKind, resourceName string, buf []byte) applyResult {
+func applyResourceByKind(ctx context.Context, c *client.Client, ibClient *client.ImageBuilderClient, kind ResourceKind, resourceName string, buf []byte) applyResult {
 	switch kind {
 	case DeviceKind:
-		response, err := client.ReplaceDeviceWithBodyWithResponse(ctx, resourceName, "application/json", bytes.NewReader(buf))
+		response, err := c.ReplaceDeviceWithBodyWithResponse(ctx, resourceName, "application/json", bytes.NewReader(buf))
 		return extractApplyResult(response, err)
 	case EnrollmentRequestKind:
-		response, err := client.ReplaceEnrollmentRequestWithBodyWithResponse(ctx, resourceName, "application/json", bytes.NewReader(buf))
+		response, err := c.ReplaceEnrollmentRequestWithBodyWithResponse(ctx, resourceName, "application/json", bytes.NewReader(buf))
 		return extractApplyResult(response, err)
 	case FleetKind:
-		response, err := client.ReplaceFleetWithBodyWithResponse(ctx, resourceName, "application/json", bytes.NewReader(buf))
+		response, err := c.ReplaceFleetWithBodyWithResponse(ctx, resourceName, "application/json", bytes.NewReader(buf))
 		return extractApplyResult(response, err)
 	case RepositoryKind:
-		response, err := client.ReplaceRepositoryWithBodyWithResponse(ctx, resourceName, "application/json", bytes.NewReader(buf))
+		response, err := c.ReplaceRepositoryWithBodyWithResponse(ctx, resourceName, "application/json", bytes.NewReader(buf))
 		return extractApplyResult(response, err)
 	case ResourceSyncKind:
-		response, err := client.ReplaceResourceSyncWithBodyWithResponse(ctx, resourceName, "application/json", bytes.NewReader(buf))
+		response, err := c.ReplaceResourceSyncWithBodyWithResponse(ctx, resourceName, "application/json", bytes.NewReader(buf))
 		return extractApplyResult(response, err)
 	case CertificateSigningRequestKind:
-		response, err := client.ReplaceCertificateSigningRequestWithBodyWithResponse(ctx, resourceName, "application/json", bytes.NewReader(buf))
+		response, err := c.ReplaceCertificateSigningRequestWithBodyWithResponse(ctx, resourceName, "application/json", bytes.NewReader(buf))
 		return extractApplyResult(response, err)
 	case AuthProviderKind:
-		response, err := client.ReplaceAuthProviderWithBodyWithResponse(ctx, resourceName, "application/json", bytes.NewReader(buf))
+		response, err := c.ReplaceAuthProviderWithBodyWithResponse(ctx, resourceName, "application/json", bytes.NewReader(buf))
 		return extractApplyResult(response, err)
 	case ImageBuildKind:
 		if ibClient == nil {
 			return applyResult{err: fmt.Errorf("imagebuilder service is not configured. Please configure 'imageBuilderService.server' in your client config")}
 		}
-		// ImageBuild is immutable, so apply always uses create. If the resource exists, it will return a conflict error.
 		response, err := ibClient.CreateImageBuildWithBodyWithResponse(ctx, "application/json", bytes.NewReader(buf))
 		return extractApplyResult(response, err)
 	case ImageExportKind:
@@ -287,6 +320,16 @@ func applyResourceByKind(ctx context.Context, client *apiclient.ClientWithRespon
 			return applyResult{err: fmt.Errorf("imagebuilder service is not configured. Please configure 'imageBuilderService.server' in your client config")}
 		}
 		response, err := ibClient.CreateImageExportWithBodyWithResponse(ctx, "application/json", bytes.NewReader(buf))
+		return extractApplyResult(response, err)
+	case CatalogKind:
+		response, err := c.V1Alpha1().ReplaceCatalogWithBodyWithResponse(ctx, resourceName, "application/json", bytes.NewReader(buf))
+		return extractApplyResult(response, err)
+	case CatalogItemKind:
+		catalogName, err := extractCatalogFromAnnotation(buf)
+		if err != nil {
+			return applyResult{err: err}
+		}
+		response, err := c.V1Alpha1().ReplaceCatalogItemWithBodyWithResponse(ctx, catalogName, resourceName, "application/json", bytes.NewReader(buf))
 		return extractApplyResult(response, err)
 	default:
 		return applyResult{err: fmt.Errorf("skipping resource of unknown kind %q", kind)}
@@ -317,6 +360,10 @@ func extractApplyResult(response interface{}, err error) applyResult {
 	case *apiclient.ReplaceCertificateSigningRequestResponse:
 		return applyResult{httpResponse: r.HTTPResponse, message: string(r.Body)}
 	case *apiclient.ReplaceAuthProviderResponse:
+		return applyResult{httpResponse: r.HTTPResponse, message: string(r.Body)}
+	case *apiclientv1alpha1.ReplaceCatalogResponse:
+		return applyResult{httpResponse: r.HTTPResponse, message: string(r.Body)}
+	case *apiclientv1alpha1.ReplaceCatalogItemResponse:
 		return applyResult{httpResponse: r.HTTPResponse, message: string(r.Body)}
 	case *imagebuilderclient.CreateImageBuildResponse:
 		return applyResult{httpResponse: r.HTTPResponse, message: string(r.Body)}
@@ -352,4 +399,20 @@ func ignoreFile(path string, extensions []string) bool {
 		}
 	}
 	return true
+}
+
+func extractCatalogFromAnnotation(buf []byte) (string, error) {
+	var resource struct {
+		Metadata struct {
+			Annotations map[string]string `json:"annotations"`
+		} `json:"metadata"`
+	}
+	if err := json.Unmarshal(buf, &resource); err != nil {
+		return "", fmt.Errorf("failed to parse resource: %w", err)
+	}
+	catalogName := resource.Metadata.Annotations[api.CatalogItemAnnotationCatalog]
+	if catalogName == "" {
+		return "", fmt.Errorf("catalogitem requires annotation %q to specify the parent catalog", api.CatalogItemAnnotationCatalog)
+	}
+	return catalogName, nil
 }
