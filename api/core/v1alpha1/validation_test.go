@@ -1009,15 +1009,16 @@ func TestSemverValidation(t *testing.T) {
 	}{
 		{"valid major.minor.patch", "1.0.0", false},
 		{"invalid with v prefix", "v1.0.0", true},
-		{"valid major.minor", "1.0", false},
 		{"valid with prerelease", "1.0.0-alpha", false},
 		{"valid with prerelease rc", "2.1.0-rc.1", false},
 		{"valid with build metadata", "1.0.0+build.123", false},
 		{"valid with prerelease and build", "1.0.0-alpha+build", false},
 		{"invalid empty", "", true},
-		{"invalid no dots", "100", true},
+		{"invalid starts with v", "v1.0.0", true},
 		{"invalid letters in version", "1.a.0", true},
 		{"invalid too many parts", "1.0.0.0.0", true},
+		{"no patch version", "1.0", true},
+		{"no minor/patch version", "100", true},
 	}
 
 	for _, tt := range tests {
@@ -1042,6 +1043,8 @@ func TestSemverRangeValidation(t *testing.T) {
 	}{
 		{"valid single constraint", ">=1.0.0", false},
 		{"valid range", ">=1.0.0 <2.0.0", false},
+		{"valid or range", ">=1.0.0 <2.0.0 || ~3.0.0", false},
+		{"valid or range", ">=1.0.0 <2.0.0, ~3.0.0", false},
 		{"valid with caret", "^1.0.0", false},
 		{"valid with tilde", "~1.0.0", false},
 		{"valid exact", "=1.0.0", false},

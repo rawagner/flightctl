@@ -104,6 +104,7 @@ require (
 )
 
 require (
+	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/docker/docker v28.5.1+incompatible
 	github.com/fsnotify/fsnotify v1.9.0

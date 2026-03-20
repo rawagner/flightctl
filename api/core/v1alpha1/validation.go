@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	semver "github.com/Masterminds/semver/v3"
 	"github.com/flightctl/flightctl/internal/util/validation"
 	"github.com/santhosh-tekuri/jsonschema/v5"
 )
@@ -299,32 +300,9 @@ func validateReplacesGraph(versions []CatalogItemVersion) []error {
 // Version must be strict semver without a "v" prefix (e.g., "1.0.0", not "v1.0.0").
 // Reference values (tags) can have any format including "v" prefix.
 func validateSemver(v string) error {
-	if strings.HasPrefix(v, "v") {
-		return fmt.Errorf("version must not have 'v' prefix; use semver format (e.g., 1.0.0)")
-	}
-
-	// Handle build metadata (+build.123)
-	v = strings.SplitN(v, "+", 2)[0]
-
-	// Basic semver pattern: MAJOR.MINOR.PATCH with optional pre-release
-	// Examples: 1.0.0, 1.2.3-alpha, 1.2.3-rc.1
-	parts := strings.SplitN(v, "-", 2)
-	coreParts := strings.Split(parts[0], ".")
-
-	if len(coreParts) < 2 || len(coreParts) > 3 {
-		return fmt.Errorf("must be valid semver (e.g., 1.0.0, 2.1.0-rc1)")
-	}
-
-	for i, part := range coreParts {
-		if part == "" {
-			return fmt.Errorf("must be valid semver (e.g., 1.0.0, 2.1.0-rc1)")
-		}
-		// Check that each part is numeric
-		for _, c := range part {
-			if c < '0' || c > '9' {
-				return fmt.Errorf("version component %d must be numeric", i+1)
-			}
-		}
+	if _, err := semver.StrictNewVersion(v); err != nil {
+		fmt.Println(v)
+		return fmt.Errorf("must be valid semver: %v", err)
 	}
 
 	return nil
@@ -334,25 +312,12 @@ func validateSemver(v string) error {
 func validateSemverRange(r string) error {
 	// Basic validation for semver range patterns like ">=1.0.0 <2.0.0"
 	// Allow common operators: >=, <=, >, <, =, ~, ^
-	if r == "" {
+	if strings.TrimSpace(r) == "" {
 		return fmt.Errorf("semver range cannot be empty")
 	}
 
-	// Split by space to handle compound ranges like ">=1.0.0 <2.0.0"
-	parts := strings.Fields(r)
-	if len(parts) == 0 {
-		return fmt.Errorf("semver range cannot be empty")
-	}
-
-	for _, part := range parts {
-		// Strip operators
-		version := strings.TrimLeft(part, ">=<~^")
-		if version == "" {
-			return fmt.Errorf("invalid semver range: missing version after operator in %q", part)
-		}
-		if err := validateSemver(version); err != nil {
-			return fmt.Errorf("invalid semver range: %v in %q", err, part)
-		}
+	if _, err := semver.NewConstraint(r); err != nil {
+		return fmt.Errorf("invalid semver range: %v", err)
 	}
 
 	return nil
