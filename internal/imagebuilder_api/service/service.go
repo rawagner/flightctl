@@ -13,16 +13,20 @@ import (
 )
 
 // Service is the aggregate service interface for the ImageBuilder API.
-// It provides access to all sub-services (ImageBuild, ImageExport, and future services).
+// It provides access to all sub-services.
 type Service interface {
 	ImageBuild() ImageBuildService
 	ImageExport() ImageExportService
+	ImageDefinition() ImageDefinitionService
+	ImageCatalogExport() ImageCatalogExportService
 }
 
 // service is the concrete implementation of Service
 type service struct {
-	imageBuild  ImageBuildService
-	imageExport ImageExportService
+	imageBuild         ImageBuildService
+	imageExport        ImageExportService
+	imageDefinition    ImageDefinitionService
+	imageCatalogExport ImageCatalogExportService
 }
 
 // NewService creates a new aggregate Service with all sub-services
@@ -41,13 +45,18 @@ func NewService(ctx context.Context, cfg *config.Config, s imagebuilderstore.Sto
 		imageBuilderServiceCfg = cfg.ImageBuilderService
 	}
 
+	imageDefinitionSvc := NewImageDefinitionService(s.ImageDefinition(), mainStore.Repository(), log)
+	imageCatalogExportSvc := NewImageCatalogExportService(s.ImageCatalogExport(), s.ImageDefinition(), log)
+
 	// Create ImageExportService first (ImageBuildService depends on it for delete flow)
 	imageExportSvc := NewImageExportService(s.ImageExport(), s.ImageBuild(), mainStore.Repository(), eventHandler, queueProducer, kvStore, imageBuilderServiceCfg, log)
 	// Create ImageBuildService with ImageExportService dependency
-	imageBuildSvc := NewImageBuildService(s.ImageBuild(), mainStore.Repository(), imageExportSvc, eventHandler, queueProducer, kvStore, imageBuilderServiceCfg, log)
+	imageBuildSvc := NewImageBuildService(s.ImageBuild(), mainStore.Repository(), imageDefinitionSvc, imageExportSvc, eventHandler, queueProducer, kvStore, imageBuilderServiceCfg, log)
 	return &service{
-		imageBuild:  imageBuildSvc,
-		imageExport: imageExportSvc,
+		imageBuild:         imageBuildSvc,
+		imageExport:        imageExportSvc,
+		imageDefinition:    imageDefinitionSvc,
+		imageCatalogExport: imageCatalogExportSvc,
 	}
 }
 
@@ -59,4 +68,14 @@ func (s *service) ImageBuild() ImageBuildService {
 // ImageExport returns the ImageExportService
 func (s *service) ImageExport() ImageExportService {
 	return s.imageExport
+}
+
+// ImageDefinition returns the ImageDefinitionService
+func (s *service) ImageDefinition() ImageDefinitionService {
+	return s.imageDefinition
+}
+
+// ImageCatalogExport returns the ImageCatalogExportService
+func (s *service) ImageCatalogExport() ImageCatalogExportService {
+	return s.imageCatalogExport
 }

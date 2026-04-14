@@ -35,6 +35,8 @@ func getDB(ctx context.Context, db *gorm.DB) *gorm.DB {
 type Store interface {
 	ImageBuild() ImageBuildStore
 	ImageExport() ImageExportStore
+	ImageDefinition() ImageDefinitionStore
+	ImageCatalogExport() ImageCatalogExportStore
 	RunMigrations(ctx context.Context) error
 	Ping() error
 	Close() error
@@ -42,19 +44,23 @@ type Store interface {
 
 // storeImpl is the concrete implementation of the imagebuilder Store interface
 type storeImpl struct {
-	imageBuild  ImageBuildStore
-	imageExport ImageExportStore
-	db          *gorm.DB
-	log         logrus.FieldLogger
+	imageBuild         ImageBuildStore
+	imageExport        ImageExportStore
+	imageDefinition    ImageDefinitionStore
+	imageCatalogExport ImageCatalogExportStore
+	db                 *gorm.DB
+	log                logrus.FieldLogger
 }
 
 // NewStore creates a new imagebuilder store
 func NewStore(db *gorm.DB, log logrus.FieldLogger) Store {
 	return &storeImpl{
-		imageBuild:  NewImageBuildStore(db, log),
-		imageExport: NewImageExportStore(db, log),
-		db:          db,
-		log:         log,
+		imageBuild:         NewImageBuildStore(db, log),
+		imageExport:        NewImageExportStore(db, log),
+		imageDefinition:    NewImageDefinitionStore(db, log),
+		imageCatalogExport: NewImageCatalogExportStore(db, log),
+		db:                 db,
+		log:                log,
 	}
 }
 
@@ -68,12 +74,28 @@ func (s *storeImpl) ImageExport() ImageExportStore {
 	return s.imageExport
 }
 
+// ImageDefinition returns the ImageDefinition store
+func (s *storeImpl) ImageDefinition() ImageDefinitionStore {
+	return s.imageDefinition
+}
+
+// ImageCatalogExport returns the ImageCatalogExport store
+func (s *storeImpl) ImageCatalogExport() ImageCatalogExportStore {
+	return s.imageCatalogExport
+}
+
 // RunMigrations runs the imagebuilder-specific migrations
 func (s *storeImpl) RunMigrations(ctx context.Context) error {
 	if err := s.imageBuild.InitialMigration(ctx); err != nil {
 		return err
 	}
-	return s.imageExport.InitialMigration(ctx)
+	if err := s.imageExport.InitialMigration(ctx); err != nil {
+		return err
+	}
+	if err := s.imageDefinition.InitialMigration(ctx); err != nil {
+		return err
+	}
+	return s.imageCatalogExport.InitialMigration(ctx)
 }
 
 // Ping checks database connectivity

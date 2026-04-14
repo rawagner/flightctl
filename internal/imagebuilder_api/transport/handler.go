@@ -407,6 +407,76 @@ func downloadErrorToStatus(err error, name string) domain.Status {
 	return service.StatusInternalServerError(err.Error())
 }
 
+// ListImageDefinitions handles GET /api/v1/imagedefinitions
+func (h *TransportHandler) ListImageDefinitions(w http.ResponseWriter, r *http.Request, params api.ListImageDefinitionsParams) {
+	domainParams := domain.ListImageDefinitionsParams{
+		Continue:      params.Continue,
+		LabelSelector: params.LabelSelector,
+		FieldSelector: params.FieldSelector,
+		Limit:         params.Limit,
+	}
+	domainBody, domainStatus := h.service.ImageDefinition().List(r.Context(), OrgIDFromContext(r.Context()), domainParams)
+	h.SetResponse(w, domainBody, domainStatus)
+}
+
+// CreateImageDefinition handles POST /api/v1/imagedefinitions
+func (h *TransportHandler) CreateImageDefinition(w http.ResponseWriter, r *http.Request) {
+	var imageDef api.ImageDefinition
+	if err := json.NewDecoder(r.Body).Decode(&imageDef); err != nil {
+		h.SetParseFailureResponse(w, err)
+		return
+	}
+	domainBody, domainStatus := h.service.ImageDefinition().Create(r.Context(), OrgIDFromContext(r.Context()), imageDef)
+	h.SetResponse(w, domainBody, domainStatus)
+}
+
+// GetImageDefinition handles GET /api/v1/imagedefinitions/{name}
+func (h *TransportHandler) GetImageDefinition(w http.ResponseWriter, r *http.Request, name string) {
+	domainBody, domainStatus := h.service.ImageDefinition().Get(r.Context(), OrgIDFromContext(r.Context()), name)
+	h.SetResponse(w, domainBody, domainStatus)
+}
+
+// DeleteImageDefinition handles DELETE /api/v1/imagedefinitions/{name}
+func (h *TransportHandler) DeleteImageDefinition(w http.ResponseWriter, r *http.Request, name string) {
+	domainBody, domainStatus := h.service.ImageDefinition().Delete(r.Context(), OrgIDFromContext(r.Context()), name)
+	h.SetResponse(w, domainBody, domainStatus)
+}
+
+// ListImageCatalogExports handles GET /api/v1/imagecatalogexports
+func (h *TransportHandler) ListImageCatalogExports(w http.ResponseWriter, r *http.Request, params api.ListImageCatalogExportsParams) {
+	domainParams := domain.ListImageCatalogExportsParams{
+		Continue:      params.Continue,
+		LabelSelector: params.LabelSelector,
+		FieldSelector: params.FieldSelector,
+		Limit:         params.Limit,
+	}
+	domainBody, domainStatus := h.service.ImageCatalogExport().List(r.Context(), OrgIDFromContext(r.Context()), domainParams)
+	h.SetResponse(w, domainBody, domainStatus)
+}
+
+// CreateImageCatalogExport handles POST /api/v1/imagecatalogexports
+func (h *TransportHandler) CreateImageCatalogExport(w http.ResponseWriter, r *http.Request) {
+	var export api.ImageCatalogExport
+	if err := json.NewDecoder(r.Body).Decode(&export); err != nil {
+		h.SetParseFailureResponse(w, err)
+		return
+	}
+	domainBody, domainStatus := h.service.ImageCatalogExport().Create(r.Context(), OrgIDFromContext(r.Context()), export)
+	h.SetResponse(w, domainBody, domainStatus)
+}
+
+// GetImageCatalogExport handles GET /api/v1/imagecatalogexports/{name}
+func (h *TransportHandler) GetImageCatalogExport(w http.ResponseWriter, r *http.Request, name string) {
+	domainBody, domainStatus := h.service.ImageCatalogExport().Get(r.Context(), OrgIDFromContext(r.Context()), name)
+	h.SetResponse(w, domainBody, domainStatus)
+}
+
+// DeleteImageCatalogExport handles DELETE /api/v1/imagecatalogexports/{name}
+func (h *TransportHandler) DeleteImageCatalogExport(w http.ResponseWriter, r *http.Request, name string) {
+	domainBody, domainStatus := h.service.ImageCatalogExport().Delete(r.Context(), OrgIDFromContext(r.Context()), name)
+	h.SetResponse(w, domainBody, domainStatus)
+}
+
 // SetResponse writes an HTTP response, converting domain.Status to the
 // imagebuilder v1alpha1 API Status via the handler's converter.
 func (h *TransportHandler) SetResponse(w http.ResponseWriter, body any, status domain.Status) {

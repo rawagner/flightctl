@@ -337,6 +337,303 @@ func (i *ImageExport) GetStatusAsJson() ([]byte, error) {
 	return i.Status.MarshalJSON()
 }
 
+// ImageDefinition model
+type ImageDefinition struct {
+	model.Resource
+
+	// The desired state, stored as opaque JSON object.
+	Spec *model.JSONField[domain.ImageDefinitionSpec] `gorm:"type:jsonb"`
+}
+
+func (i ImageDefinition) String() string {
+	val, _ := json.Marshal(i)
+	return string(val)
+}
+
+func NewImageDefinitionFromDomain(resource *domain.ImageDefinition) (*ImageDefinition, error) {
+	if resource == nil || resource.Metadata.Name == nil {
+		return &ImageDefinition{}, nil
+	}
+	var resourceVersion *int64
+	if resource.Metadata.ResourceVersion != nil {
+		rv, err := strconv.ParseInt(lo.FromPtr(resource.Metadata.ResourceVersion), 10, 64)
+		if err != nil {
+			return nil, flterrors.ErrIllegalResourceVersionFormat
+		}
+		resourceVersion = &rv
+	}
+	return &ImageDefinition{
+		Resource: model.Resource{
+			Name:            *resource.Metadata.Name,
+			Labels:          lo.FromPtrOr(resource.Metadata.Labels, make(map[string]string)),
+			Annotations:     lo.FromPtrOr(resource.Metadata.Annotations, make(map[string]string)),
+			Generation:      resource.Metadata.Generation,
+			Owner:           resource.Metadata.Owner,
+			ResourceVersion: resourceVersion,
+		},
+		Spec: model.MakeJSONField(resource.Spec),
+	}, nil
+}
+
+func ImageDefinitionAPIVersion() string {
+	return fmt.Sprintf("%s/%s", domain.APIGroup, domain.ImageDefinitionAPIVersion)
+}
+
+func (i *ImageDefinition) ToDomain() (*domain.ImageDefinition, error) {
+	if i == nil {
+		return &domain.ImageDefinition{}, nil
+	}
+
+	spec := domain.ImageDefinitionSpec{}
+	if i.Spec != nil {
+		spec = i.Spec.Data
+	}
+
+	return &domain.ImageDefinition{
+		ApiVersion: ImageDefinitionAPIVersion(),
+		Kind:       string(domain.ResourceKindImageDefinition),
+		Metadata: domain.ObjectMeta{
+			Name:              lo.ToPtr(i.Name),
+			CreationTimestamp: lo.ToPtr(i.CreatedAt.UTC()),
+			Labels:            lo.ToPtr(util.EnsureMap(i.Resource.Labels)),
+			Annotations:       lo.ToPtr(util.EnsureMap(i.Resource.Annotations)),
+			Generation:        i.Generation,
+			Owner:             i.Owner,
+			ResourceVersion:   lo.Ternary(i.ResourceVersion != nil, lo.ToPtr(strconv.FormatInt(lo.FromPtr(i.ResourceVersion), 10)), nil),
+		},
+		Spec: spec,
+	}, nil
+}
+
+func ImageDefinitionsToDomain(items []ImageDefinition, cont *string, numRemaining *int64) (domain.ImageDefinitionList, error) {
+	list := make([]domain.ImageDefinition, len(items))
+	for i, item := range items {
+		domainResource, _ := item.ToDomain()
+		list[i] = *domainResource
+	}
+	ret := domain.ImageDefinitionList{
+		ApiVersion: ImageDefinitionAPIVersion(),
+		Kind:       domain.ImageDefinitionListKind,
+		Items:      list,
+		Metadata:   domain.ListMeta{},
+	}
+	if cont != nil {
+		ret.Metadata.Continue = cont
+		ret.Metadata.RemainingItemCount = numRemaining
+	}
+	return ret, nil
+}
+
+func (i *ImageDefinition) GetKind() string {
+	return string(domain.ResourceKindImageDefinition)
+}
+
+func (i *ImageDefinition) HasNilSpec() bool {
+	return i.Spec == nil
+}
+
+func (i *ImageDefinition) HasSameSpecAs(otherResource any) bool {
+	other, ok := otherResource.(*ImageDefinition)
+	if !ok || other == nil {
+		return false
+	}
+	if i.Spec == nil && other.Spec == nil {
+		return true
+	}
+	if (i.Spec == nil) != (other.Spec == nil) {
+		return false
+	}
+	thisSpec, _ := json.Marshal(i.Spec.Data)
+	otherSpec, _ := json.Marshal(other.Spec.Data)
+	return string(thisSpec) == string(otherSpec)
+}
+
+func (i *ImageDefinition) GetStatusAsJson() ([]byte, error) {
+	return []byte("{}"), nil
+}
+
+// ResolveSelector resolves a field selector name to a SelectorField for ImageDefinition
+func (i *ImageDefinition) ResolveSelector(name selector.SelectorName) (*selector.SelectorField, error) {
+	return nil, fmt.Errorf("unable to resolve selector for image definition")
+}
+
+// ListSelectors returns all available field selectors for ImageDefinition
+func (i *ImageDefinition) ListSelectors() selector.SelectorNameSet {
+	return selector.NewSelectorFieldNameSet()
+}
+
+// ImageCatalogExport model
+type ImageCatalogExport struct {
+	model.Resource
+
+	// The desired state, stored as opaque JSON object.
+	Spec *model.JSONField[domain.ImageCatalogExportSpec] `gorm:"type:jsonb"`
+}
+
+func (i ImageCatalogExport) String() string {
+	val, _ := json.Marshal(i)
+	return string(val)
+}
+
+func NewImageCatalogExportFromDomain(resource *domain.ImageCatalogExport) (*ImageCatalogExport, error) {
+	if resource == nil || resource.Metadata.Name == nil {
+		return &ImageCatalogExport{}, nil
+	}
+	var resourceVersion *int64
+	if resource.Metadata.ResourceVersion != nil {
+		rv, err := strconv.ParseInt(lo.FromPtr(resource.Metadata.ResourceVersion), 10, 64)
+		if err != nil {
+			return nil, flterrors.ErrIllegalResourceVersionFormat
+		}
+		resourceVersion = &rv
+	}
+	return &ImageCatalogExport{
+		Resource: model.Resource{
+			Name:            *resource.Metadata.Name,
+			Labels:          lo.FromPtrOr(resource.Metadata.Labels, make(map[string]string)),
+			Annotations:     lo.FromPtrOr(resource.Metadata.Annotations, make(map[string]string)),
+			Generation:      resource.Metadata.Generation,
+			Owner:           resource.Metadata.Owner,
+			ResourceVersion: resourceVersion,
+		},
+		Spec: model.MakeJSONField(resource.Spec),
+	}, nil
+}
+
+func ImageCatalogExportAPIVersion() string {
+	return fmt.Sprintf("%s/%s", domain.APIGroup, domain.ImageCatalogExportAPIVersion)
+}
+
+func (i *ImageCatalogExport) ToDomain() (*domain.ImageCatalogExport, error) {
+	if i == nil {
+		return &domain.ImageCatalogExport{}, nil
+	}
+
+	spec := domain.ImageCatalogExportSpec{}
+	if i.Spec != nil {
+		spec = i.Spec.Data
+	}
+
+	return &domain.ImageCatalogExport{
+		ApiVersion: ImageCatalogExportAPIVersion(),
+		Kind:       string(domain.ResourceKindImageCatalogExport),
+		Metadata: domain.ObjectMeta{
+			Name:              lo.ToPtr(i.Name),
+			CreationTimestamp: lo.ToPtr(i.CreatedAt.UTC()),
+			Labels:            lo.ToPtr(util.EnsureMap(i.Resource.Labels)),
+			Annotations:       lo.ToPtr(util.EnsureMap(i.Resource.Annotations)),
+			Generation:        i.Generation,
+			Owner:             i.Owner,
+			ResourceVersion:   lo.Ternary(i.ResourceVersion != nil, lo.ToPtr(strconv.FormatInt(lo.FromPtr(i.ResourceVersion), 10)), nil),
+		},
+		Spec: spec,
+	}, nil
+}
+
+func ImageCatalogExportsToDomain(items []ImageCatalogExport, cont *string, numRemaining *int64) (domain.ImageCatalogExportList, error) {
+	list := make([]domain.ImageCatalogExport, len(items))
+	for i, item := range items {
+		domainResource, _ := item.ToDomain()
+		list[i] = *domainResource
+	}
+	ret := domain.ImageCatalogExportList{
+		ApiVersion: ImageCatalogExportAPIVersion(),
+		Kind:       domain.ImageCatalogExportListKind,
+		Items:      list,
+		Metadata:   domain.ListMeta{},
+	}
+	if cont != nil {
+		ret.Metadata.Continue = cont
+		ret.Metadata.RemainingItemCount = numRemaining
+	}
+	return ret, nil
+}
+
+func (i *ImageCatalogExport) GetKind() string {
+	return string(domain.ResourceKindImageCatalogExport)
+}
+
+func (i *ImageCatalogExport) HasNilSpec() bool {
+	return i.Spec == nil
+}
+
+func (i *ImageCatalogExport) HasSameSpecAs(otherResource any) bool {
+	other, ok := otherResource.(*ImageCatalogExport)
+	if !ok || other == nil {
+		return false
+	}
+	if i.Spec == nil && other.Spec == nil {
+		return true
+	}
+	if (i.Spec == nil) != (other.Spec == nil) {
+		return false
+	}
+	thisSpec, _ := json.Marshal(i.Spec.Data)
+	otherSpec, _ := json.Marshal(other.Spec.Data)
+	return string(thisSpec) == string(otherSpec)
+}
+
+func (i *ImageCatalogExport) GetStatusAsJson() ([]byte, error) {
+	return []byte("{}"), nil
+}
+
+// imageCatalogExportSpecSelectors defines field selectors for ImageCatalogExport
+var imageCatalogExportSpecSelectors = map[selector.SelectorName]selector.SelectorType{
+	selector.NewSelectorName("spec.imageDefinitionRef"): selector.String,
+	selector.NewSelectorName("spec.catalogRef"):         selector.String,
+}
+
+// ResolveSelector resolves a field selector name to a SelectorField for ImageCatalogExport
+func (i *ImageCatalogExport) ResolveSelector(name selector.SelectorName) (*selector.SelectorField, error) {
+	if typ, exists := imageCatalogExportSpecSelectors[name]; exists {
+		return makeImageCatalogExportJSONBSelectorField(name, typ)
+	}
+	return nil, fmt.Errorf("unable to resolve selector for image catalog export")
+}
+
+// ListSelectors returns all available field selectors for ImageCatalogExport
+func (i *ImageCatalogExport) ListSelectors() selector.SelectorNameSet {
+	keys := make([]selector.SelectorName, 0, len(imageCatalogExportSpecSelectors))
+	for sn := range imageCatalogExportSpecSelectors {
+		keys = append(keys, sn)
+	}
+	return selector.NewSelectorFieldNameSet().Add(keys...)
+}
+
+// makeImageCatalogExportJSONBSelectorField creates a SelectorField for JSONB fields in ImageCatalogExport
+func makeImageCatalogExportJSONBSelectorField(selectorName selector.SelectorName, selectorType selector.SelectorType) (*selector.SelectorField, error) {
+	selectorStr := selectorName.String()
+	if len(selectorStr) == 0 {
+		return nil, fmt.Errorf("jsonb selector name cannot be empty")
+	}
+
+	var params strings.Builder
+	parts := strings.Split(selectorStr, ".")
+	params.WriteString(parts[0])
+
+	lastIndex := len(parts[1:]) - 1
+	for i, part := range parts[1:] {
+		if i == lastIndex && selectorType != selector.Jsonb {
+			params.WriteString(" ->> '")
+		} else {
+			params.WriteString(" -> '")
+		}
+		params.WriteString(part)
+		params.WriteString("'")
+	}
+
+	return &selector.SelectorField{
+		Name:      selectorName,
+		Type:      selectorType,
+		FieldName: params.String(),
+		FieldType: "jsonb",
+	}, nil
+}
+
+// Compile-time checks that new models implement model.ResourceInterface
+var _ model.ResourceInterface = (*ImageDefinition)(nil)
+var _ model.ResourceInterface = (*ImageCatalogExport)(nil)
+
 // Field selector support for ImageBuild
 var imageBuildStatusSelectors = map[selector.SelectorName]selector.SelectorType{
 	selector.NewSelectorName("status.conditions.ready.reason"): selector.String,

@@ -19,6 +19,10 @@ tags:
     description: Operations on ImageBuild resources.
   - name: imageexport
     description: Operations on ImageExport resources.
+  - name: imagedefinition
+    description: Operations on ImageDefinition resources.
+  - name: imagecatalogexport
+    description: Operations on ImageCatalogExport resources.
 # Note: Security is handled by Chi middleware (auth.CreateAuthNMiddleware), not OpenAPI validation
 # The securitySchemes are defined in components for documentation purposes
 paths:
@@ -363,6 +367,446 @@ paths:
                 $ref: '#/components/schemas/Status'
         "409":
           description: Conflict - Build not in cancelable state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/imagedefinitions:
+    x-resource: imagedefinitions
+    get:
+      tags:
+        - imagedefinition
+      description: List ImageDefinition resources.
+      operationId: listImageDefinitions
+      parameters:
+        - name: labelSelector
+          in: query
+          description: A selector to restrict the list of returned objects by their labels.
+          schema:
+            type: string
+        - name: fieldSelector
+          in: query
+          description: A selector to restrict the list of returned objects by their fields.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: The maximum number of results returned in the list response.
+          schema:
+            type: integer
+            format: int32
+        - name: continue
+          in: query
+          description: An optional parameter to query more results from the server.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageDefinitionList'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - imagedefinition
+      description: Create an ImageDefinition resource.
+      operationId: createImageDefinition
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageDefinition'
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageDefinition'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/imagedefinitions/{name}:
+    x-resource: imagedefinitions
+    get:
+      tags:
+        - imagedefinition
+      description: Get an ImageDefinition resource.
+      operationId: getImageDefinition
+      parameters:
+        - name: name
+          in: path
+          description: The name of the ImageDefinition resource.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageDefinition'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    delete:
+      tags:
+        - imagedefinition
+      description: Delete an ImageDefinition resource.
+      operationId: deleteImageDefinition
+      parameters:
+        - name: name
+          in: path
+          description: The name of the ImageDefinition resource.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageDefinition'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/imagecatalogexports:
+    x-resource: imagecatalogexports
+    get:
+      tags:
+        - imagecatalogexport
+      description: List ImageCatalogExport resources.
+      operationId: listImageCatalogExports
+      parameters:
+        - name: labelSelector
+          in: query
+          description: A selector to restrict the list of returned objects by their labels.
+          schema:
+            type: string
+        - name: fieldSelector
+          in: query
+          description: A selector to restrict the list of returned objects by their fields.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: The maximum number of results returned in the list response.
+          schema:
+            type: integer
+            format: int32
+        - name: continue
+          in: query
+          description: An optional parameter to query more results from the server.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageCatalogExportList'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    post:
+      tags:
+        - imagecatalogexport
+      description: Create an ImageCatalogExport resource.
+      operationId: createImageCatalogExport
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageCatalogExport'
+        required: true
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageCatalogExport'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+  /api/v1/imagecatalogexports/{name}:
+    x-resource: imagecatalogexports
+    get:
+      tags:
+        - imagecatalogexport
+      description: Get an ImageCatalogExport resource.
+      operationId: getImageCatalogExport
+      parameters:
+        - name: name
+          in: path
+          description: The name of the ImageCatalogExport resource.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageCatalogExport'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "503":
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+    delete:
+      tags:
+        - imagecatalogexport
+      description: Delete an ImageCatalogExport resource.
+      operationId: deleteImageCatalogExport
+      parameters:
+        - name: name
+          in: path
+          description: The name of the ImageCatalogExport resource.
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageCatalogExport'
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        "404":
+          description: Not Found
           content:
             application/json:
               schema:
@@ -819,7 +1263,7 @@ components:
         - ApiVersionFlightctlIoV1alpha1
     ResourceKind:
       type: string
-      enum: [ImageBuild, ImageExport]
+      enum: [ImageBuild, ImageExport, ImageDefinition, ImageCatalogExport]
       description: Resource types exposed via the ImageBuilder API.
     ImageBuild:
       type: object
@@ -871,8 +1315,17 @@ components:
 
     ImageBuildSpec:
       type: object
-      description: ImageBuildSpec describes the specification for an image build.
+      description: |
+        ImageBuildSpec describes the specification for an image build.
+        Exactly one of imageDefinitionRef or (source + destination) must be provided — they are mutually exclusive.
+        When imageDefinitionRef is set, source and destination must be absent; they are resolved from the ImageDefinition at create time and stored in status.
       properties:
+        imageDefinitionRef:
+          type: string
+          description: |
+            The name of the ImageDefinition resource this build is based on.
+            Mutually exclusive with spec.source and spec.destination.
+            When set, source and destination are derived from the ImageDefinition and the image tag is auto-incremented.
         source:
           $ref: '#/components/schemas/ImageBuildSource'
         destination:
@@ -882,8 +1335,6 @@ components:
         userConfiguration:
           $ref: '#/components/schemas/ImageBuildUserConfiguration'
       required:
-        - source
-        - destination
         - binding
 
     ImageBuildSource:
@@ -1001,6 +1452,15 @@ components:
           type: string
           format: date-time
           description: The last time the build was seen (heartbeat).
+        resolvedSource:
+          $ref: '#/components/schemas/ImageBuildSource'
+          description: The resolved source image, populated at create time when imageDefinitionRef is set.
+        resolvedDestination:
+          $ref: '#/components/schemas/ImageBuildDestination'
+          description: The resolved destination image including the auto-computed tag, populated at create time when imageDefinitionRef is set.
+        resolvedVersion:
+          type: string
+          description: The resolved semantic version (e.g. 1.0.2), populated at create time when imageDefinitionRef is set.
 
     ImageBuildCondition:
       description: Condition for ImageBuild resources.
@@ -1209,6 +1669,164 @@ components:
         - ImageExportFormatPhasePushing
         - ImageExportFormatPhaseComplete
         - ImageExportFormatPhaseFailed
+    # ImageDefinition schemas
+    ImageDefinition:
+      type: object
+      description: ImageDefinition is a reusable template describing the source, destination, and version pattern for image builds. Creating an ImageDefinition triggers no automation by itself.
+      properties:
+        apiVersion:
+          $ref: '#/components/schemas/ApiVersion'
+        kind:
+          type: string
+          description: 'Kind is a string value representing the REST resource this object represents.'
+        metadata:
+          $ref: '../../core/v1beta1/openapi.yaml#/components/schemas/ObjectMeta'
+        spec:
+          $ref: '#/components/schemas/ImageDefinitionSpec'
+      required:
+        - apiVersion
+        - kind
+        - metadata
+        - spec
+
+    ImageDefinitionList:
+      type: object
+      description: ImageDefinitionList is a list of ImageDefinition resources.
+      properties:
+        apiVersion:
+          $ref: '#/components/schemas/ApiVersion'
+        kind:
+          type: string
+          description: 'Kind is a string value representing the REST resource this object represents.'
+        metadata:
+          $ref: '../../core/v1beta1/openapi.yaml#/components/schemas/ListMeta'
+        items:
+          type: array
+          description: 'List of ImageDefinition resources.'
+          items:
+            $ref: '#/components/schemas/ImageDefinition'
+      required:
+        - apiVersion
+        - kind
+        - metadata
+        - items
+
+    ImageDefinitionSpec:
+      type: object
+      description: ImageDefinitionSpec describes the template for image builds derived from this definition.
+      properties:
+        source:
+          $ref: '#/components/schemas/ImageBuildSource'
+        destination:
+          $ref: '#/components/schemas/ImageDefinitionDestination'
+        version:
+          type: string
+          description: |
+            Semver pattern for the image tag in the form MAJOR.MINOR.x (e.g. 1.0.x).
+            The patch component (x) is auto-incremented on each successful build.
+          example: "1.0.x"
+      required:
+        - source
+        - destination
+        - version
+
+    ImageDefinitionDestination:
+      type: object
+      description: ImageDefinitionDestination specifies the destination repository and image name for builds. The image tag is not set here; it is computed per build.
+      properties:
+        repository:
+          type: string
+          description: The name of the Repository resource of type OCI to push the built image to.
+        imageName:
+          type: string
+          description: The name of the output image.
+      required:
+        - repository
+        - imageName
+
+    # ImageCatalogExport schemas
+    ImageCatalogExport:
+      type: object
+      description: |
+        ImageCatalogExport links an ImageDefinition to a core/Catalog. On every successful
+        build of the referenced ImageDefinition, the associated CatalogItem is created or
+        updated with a new version entry.
+      properties:
+        apiVersion:
+          $ref: '#/components/schemas/ApiVersion'
+        kind:
+          type: string
+          description: 'Kind is a string value representing the REST resource this object represents.'
+        metadata:
+          $ref: '../../core/v1beta1/openapi.yaml#/components/schemas/ObjectMeta'
+        spec:
+          $ref: '#/components/schemas/ImageCatalogExportSpec'
+      required:
+        - apiVersion
+        - kind
+        - metadata
+        - spec
+
+    ImageCatalogExportList:
+      type: object
+      description: ImageCatalogExportList is a list of ImageCatalogExport resources.
+      properties:
+        apiVersion:
+          $ref: '#/components/schemas/ApiVersion'
+        kind:
+          type: string
+          description: 'Kind is a string value representing the REST resource this object represents.'
+        metadata:
+          $ref: '../../core/v1beta1/openapi.yaml#/components/schemas/ListMeta'
+        items:
+          type: array
+          description: 'List of ImageCatalogExport resources.'
+          items:
+            $ref: '#/components/schemas/ImageCatalogExport'
+      required:
+        - apiVersion
+        - kind
+        - metadata
+        - items
+
+    ImageCatalogExportSpec:
+      type: object
+      description: ImageCatalogExportSpec describes the catalog export configuration.
+      properties:
+        imageDefinitionRef:
+          type: string
+          description: The name of the ImageDefinition resource this export is associated with.
+        catalogRef:
+          type: string
+          description: The name of the core/Catalog resource where the CatalogItem will be created or updated.
+        catalogItemName:
+          type: string
+          description: The name of the CatalogItem within the catalog. Defaults to the value of imageDefinitionRef if not set.
+        displayName:
+          type: string
+          description: Human-readable display name shown in catalog listings.
+        shortDescription:
+          type: string
+          description: A brief one-line description of the catalog item.
+        provider:
+          type: string
+          description: Provider or publisher of the catalog item.
+        support:
+          type: string
+          description: Link to support resources or documentation.
+        homepage:
+          type: string
+          description: The homepage URL for the catalog item project.
+        documentationUrl:
+          type: string
+          description: Link to external documentation.
+        readme:
+          type: string
+          description: Detailed documentation for the catalog item, preferably in markdown format.
+      required:
+        - imageDefinitionRef
+        - catalogRef
+
     Status:
       type: object
       properties:

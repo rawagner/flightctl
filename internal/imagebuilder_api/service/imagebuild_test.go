@@ -24,7 +24,7 @@ func statusCode(status v1beta1.Status) int32 {
 func newTestImageBuildService() (ImageBuildService, *DummyImageBuildStore) {
 	imageBuildStore := NewDummyImageBuildStore()
 	repositoryStore := NewDummyRepositoryStore()
-	svc := NewImageBuildService(imageBuildStore, repositoryStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(imageBuildStore, repositoryStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 	return svc, imageBuildStore
 }
 
@@ -33,7 +33,7 @@ func newTestImageBuildServiceWithExports() (ImageBuildService, *DummyImageBuildS
 	imageBuildStore := NewDummyImageBuildStoreWithExports(imageExportStore)
 	repositoryStore := NewDummyRepositoryStore()
 	// Note: ImageBuildService doesn't need ImageExportService - the store handles withExports
-	svc := NewImageBuildService(imageBuildStore, repositoryStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(imageBuildStore, repositoryStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 	return svc, imageBuildStore, imageExportStore
 }
 
@@ -45,12 +45,12 @@ func newValidImageBuild(name string) api.ImageBuild {
 			Name: lo.ToPtr(name),
 		},
 		Spec: api.ImageBuildSpec{
-			Source: api.ImageBuildSource{
+			Source: &api.ImageBuildSource{
 				Repository: "input-registry",
 				ImageName:  "input-image",
 				ImageTag:   "v1.0",
 			},
-			Destination: api.ImageBuildDestination{
+			Destination: &api.ImageBuildDestination{
 				Repository: "output-registry",
 				ImageName:  "output-image",
 				ImageTag:   "v1.0",
@@ -77,7 +77,7 @@ func TestCreateImageBuild(t *testing.T) {
 	// Set up repositories
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	imageBuild := newValidImageBuild("test-build")
 	result, status := svc.Create(ctx, orgId, imageBuild)
@@ -95,7 +95,7 @@ func TestCreateImageBuildDuplicate(t *testing.T) {
 	// Set up repositories
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	imageBuild := newValidImageBuild("duplicate-test")
 
@@ -117,12 +117,12 @@ func TestCreateImageBuildMissingInputRegistry(t *testing.T) {
 	imageBuild := api.ImageBuild{
 		Metadata: v1beta1.ObjectMeta{Name: lo.ToPtr("test")},
 		Spec: api.ImageBuildSpec{
-			Source: api.ImageBuildSource{
+			Source: &api.ImageBuildSource{
 				ImageName: "input-image",
 				ImageTag:  "v1.0",
 				// Missing Repository
 			},
-			Destination: api.ImageBuildDestination{
+			Destination: &api.ImageBuildDestination{
 				Repository: "output-registry",
 				ImageName:  "output-image",
 				ImageTag:   "v1.0",
@@ -142,7 +142,7 @@ func TestGetImageBuild(t *testing.T) {
 	// Set up repositories
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	// Create first
 	imageBuild := newValidImageBuild("get-test")
@@ -174,7 +174,7 @@ func TestListImageBuilds(t *testing.T) {
 	// Set up repositories
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	// Create multiple
 	for i := 0; i < 3; i++ {
@@ -198,7 +198,7 @@ func TestListImageBuildsWithLimit(t *testing.T) {
 	// Set up repositories
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	// Create multiple
 	for i := 0; i < 5; i++ {
@@ -234,7 +234,7 @@ func setupImageBuildDeleteTestService(ctx context.Context, orgId uuid.UUID, kvSt
 	// Create ImageExportService first (ImageBuildService depends on it for delete flow)
 	imageExportSvc := NewImageExportService(imageExportStore, imageBuildStore, repoStore, nil, nil, kvStore, cfg, log.InitLogs())
 	// Create ImageBuildService with ImageExportService dependency
-	imageBuildSvc := NewImageBuildService(imageBuildStore, repoStore, imageExportSvc, nil, nil, kvStore, cfg, log.InitLogs())
+	imageBuildSvc := NewImageBuildService(imageBuildStore, repoStore, nil, imageExportSvc, nil, nil, kvStore, cfg, log.InitLogs())
 
 	return imageBuildSvc, imageExportSvc, imageBuildStore, imageExportStore
 }
@@ -586,7 +586,7 @@ func TestUpdateStatus(t *testing.T) {
 	// Set up repositories
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	// Create first
 	imageBuild := newValidImageBuild("status-test")
@@ -625,7 +625,7 @@ func TestGetImageBuildWithExports(t *testing.T) {
 	// Set up repositories
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
-	svc := NewImageBuildService(NewDummyImageBuildStoreWithExports(imageExportStore), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStoreWithExports(imageExportStore), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	// Create an ImageBuild
 	imageBuild := newValidImageBuild("build-with-exports")
@@ -671,7 +671,7 @@ func TestGetImageBuildWithExportsNoExports(t *testing.T) {
 	// Set up repositories
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
-	svc := NewImageBuildService(NewDummyImageBuildStoreWithExports(NewDummyImageExportStore()), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStoreWithExports(NewDummyImageExportStore()), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	// Create an ImageBuild with no ImageExports
 	imageBuild := newValidImageBuild("build-no-exports")
@@ -694,7 +694,7 @@ func TestListImageBuildsWithExports(t *testing.T) {
 	// Set up repositories
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
-	svc := NewImageBuildService(NewDummyImageBuildStoreWithExports(imageExportStore), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStoreWithExports(imageExportStore), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	// Create multiple ImageBuilds
 	build1 := newValidImageBuild("build-1")
@@ -772,7 +772,7 @@ func TestCreateImageBuildSourceRepositoryNotFound(t *testing.T) {
 	repoStore := NewDummyRepositoryStore()
 	destRepo := newOciRepository("output-registry", v1beta1.ReadWrite)
 	_, _ = repoStore.Create(ctx, orgId, destRepo, nil)
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	imageBuild := newValidImageBuild("test-build")
 	_, status := svc.Create(ctx, orgId, imageBuild)
@@ -790,7 +790,7 @@ func TestCreateImageBuildDestinationRepositoryNotFound(t *testing.T) {
 	repoStore := NewDummyRepositoryStore()
 	sourceRepo := newOciRepository("input-registry", v1beta1.Read)
 	_, _ = repoStore.Create(ctx, orgId, sourceRepo, nil)
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	imageBuild := newValidImageBuild("test-build")
 	_, status := svc.Create(ctx, orgId, imageBuild)
@@ -823,7 +823,7 @@ func TestCreateImageBuildSourceRepositoryNotOci(t *testing.T) {
 
 	destRepo := newOciRepository("output-registry", v1beta1.ReadWrite)
 	_, _ = repoStore.Create(ctx, orgId, destRepo, nil)
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	imageBuild := newValidImageBuild("test-build")
 	_, status := svc.Create(ctx, orgId, imageBuild)
@@ -856,7 +856,7 @@ func TestCreateImageBuildDestinationRepositoryNotOci(t *testing.T) {
 		Spec: spec,
 	}
 	_, _ = repoStore.Create(ctx, orgId, destRepo, nil)
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	imageBuild := newValidImageBuild("test-build")
 	_, status := svc.Create(ctx, orgId, imageBuild)
@@ -877,7 +877,7 @@ func TestCreateImageBuildDestinationRepositoryNotReadWrite(t *testing.T) {
 
 	destRepo := newOciRepository("output-registry", v1beta1.Read)
 	_, _ = repoStore.Create(ctx, orgId, destRepo, nil)
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	imageBuild := newValidImageBuild("test-build")
 	_, status := svc.Create(ctx, orgId, imageBuild)
@@ -894,7 +894,7 @@ func TestCreateImageBuildWithUserConfiguration(t *testing.T) {
 	// Set up repositories
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	imageBuild := newValidImageBuild("test-build")
 	imageBuild.Spec.UserConfiguration = &api.ImageBuildUserConfiguration{
@@ -919,7 +919,7 @@ func TestCreateImageBuildWithUserConfigurationMissingUsername(t *testing.T) {
 	// Set up repositories
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	imageBuild := newValidImageBuild("test-build")
 	imageBuild.Spec.UserConfiguration = &api.ImageBuildUserConfiguration{
@@ -941,7 +941,7 @@ func TestCreateImageBuildWithUserConfigurationMissingPublickey(t *testing.T) {
 	// Set up repositories
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	imageBuild := newValidImageBuild("test-build")
 	imageBuild.Spec.UserConfiguration = &api.ImageBuildUserConfiguration{
@@ -963,7 +963,7 @@ func TestCreateImageBuildWithUserConfigurationInvalidUsername(t *testing.T) {
 	// Set up repositories
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	imageBuild := newValidImageBuild("test-build")
 	imageBuild.Spec.UserConfiguration = &api.ImageBuildUserConfiguration{
@@ -986,7 +986,7 @@ func TestCreateImageBuildWithUserConfigurationInvalidPublickey(t *testing.T) {
 	// Set up repositories
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, nil, nil, log.InitLogs())
 
 	imageBuild := newValidImageBuild("test-build")
 	imageBuild.Spec.UserConfiguration = &api.ImageBuildUserConfiguration{
@@ -1009,7 +1009,7 @@ func TestCancelImageBuild_Pending(t *testing.T) {
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
 	kvStore := NewDummyKVStore()
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, kvStore, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, kvStore, nil, log.InitLogs())
 
 	// Create an ImageBuild
 	imageBuild := newValidImageBuild("cancel-test")
@@ -1053,7 +1053,7 @@ func TestCancelImageBuild_Building(t *testing.T) {
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
 	kvStore := NewDummyKVStore()
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, kvStore, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, kvStore, nil, log.InitLogs())
 
 	// Create an ImageBuild
 	imageBuild := newValidImageBuild("cancel-building-test")
@@ -1095,7 +1095,7 @@ func TestCancelImageBuild_Pushing(t *testing.T) {
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
 	kvStore := NewDummyKVStore()
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, kvStore, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, kvStore, nil, log.InitLogs())
 
 	// Create an ImageBuild
 	imageBuild := newValidImageBuild("cancel-pushing-test")
@@ -1137,7 +1137,7 @@ func TestCancelImageBuild_NotCancelable_Completed(t *testing.T) {
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
 	kvStore := NewDummyKVStore()
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, kvStore, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, kvStore, nil, log.InitLogs())
 
 	// Create an ImageBuild
 	imageBuild := newValidImageBuild("cancel-completed-test")
@@ -1173,7 +1173,7 @@ func TestCancelImageBuild_NotCancelable_Failed(t *testing.T) {
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
 	kvStore := NewDummyKVStore()
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, kvStore, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, kvStore, nil, log.InitLogs())
 
 	// Create an ImageBuild
 	imageBuild := newValidImageBuild("cancel-failed-test")
@@ -1209,7 +1209,7 @@ func TestCancelImageBuild_NotCancelable_Canceled(t *testing.T) {
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
 	kvStore := NewDummyKVStore()
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, kvStore, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, kvStore, nil, log.InitLogs())
 
 	// Create an ImageBuild
 	imageBuild := newValidImageBuild("cancel-canceled-test")
@@ -1244,7 +1244,7 @@ func TestCancelImageBuild_NotFound(t *testing.T) {
 	// Set up repositories
 	repoStore := NewDummyRepositoryStore()
 	kvStore := NewDummyKVStore()
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, kvStore, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, kvStore, nil, log.InitLogs())
 
 	// Attempt to cancel non-existent build
 	_, err := svc.Cancel(ctx, orgId, "nonexistent")
@@ -1260,7 +1260,7 @@ func TestCancelImageBuild_NoStatus(t *testing.T) {
 	repoStore := NewDummyRepositoryStore()
 	setupRepositoriesForImageBuild(repoStore, ctx, orgId)
 	kvStore := NewDummyKVStore()
-	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, kvStore, nil, log.InitLogs())
+	svc := NewImageBuildService(NewDummyImageBuildStore(), repoStore, nil, nil, nil, nil, kvStore, nil, log.InitLogs())
 
 	// Create an ImageBuild with no status (treated as Pending)
 	imageBuild := newValidImageBuild("cancel-nostatus-test")

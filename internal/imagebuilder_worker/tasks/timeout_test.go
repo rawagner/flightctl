@@ -44,6 +44,14 @@ func (m *mockImageBuilderService) ImageExport() imagebuilderapi.ImageExportServi
 	return &mockImageExportService{parent: m}
 }
 
+func (m *mockImageBuilderService) ImageDefinition() imagebuilderapi.ImageDefinitionService {
+	return nil
+}
+
+func (m *mockImageBuilderService) ImageCatalogExport() imagebuilderapi.ImageCatalogExportService {
+	return nil
+}
+
 type mockImageBuildService struct {
 	parent *mockImageBuilderService
 }

@@ -11,6 +11,8 @@ const (
 	API_RESOURCE_IMAGEBUILDS = "imagebuilds"
 	API_RESOURCE_IMAGEBUILDS_CANCEL = "imagebuilds/cancel"
 	API_RESOURCE_IMAGEBUILDS_LOG = "imagebuilds/log"
+	API_RESOURCE_IMAGECATALOGEXPORTS = "imagecatalogexports"
+	API_RESOURCE_IMAGEDEFINITIONS = "imagedefinitions"
 	API_RESOURCE_IMAGEEXPORTS = "imageexports"
 	API_RESOURCE_IMAGEEXPORTS_CANCEL = "imageexports/cancel"
 	API_RESOURCE_IMAGEEXPORTS_DOWNLOAD = "imageexports/download"
@@ -79,6 +81,70 @@ var APIMetadataMap = map[string]*apimetadata.EndpointMetadata{
 	"GET:/api/v1/imagebuilds/{name}/log": {
 		OperationID: "getImageBuildLog",
 		Resource:    "imagebuilds/log",
+		Action:      "get",
+		Versions: []apimetadata.EndpointMetadataVersion{
+			{Version: "v1alpha1", DeprecatedAt: nil},
+		},
+	},
+	"GET:/api/v1/imagecatalogexports": {
+		OperationID: "listImageCatalogExports",
+		Resource:    "imagecatalogexports",
+		Action:      "list",
+		Versions: []apimetadata.EndpointMetadataVersion{
+			{Version: "v1alpha1", DeprecatedAt: nil},
+		},
+	},
+	"POST:/api/v1/imagecatalogexports": {
+		OperationID: "createImageCatalogExport",
+		Resource:    "imagecatalogexports",
+		Action:      "create",
+		Versions: []apimetadata.EndpointMetadataVersion{
+			{Version: "v1alpha1", DeprecatedAt: nil},
+		},
+	},
+	"DELETE:/api/v1/imagecatalogexports/{name}": {
+		OperationID: "deleteImageCatalogExport",
+		Resource:    "imagecatalogexports",
+		Action:      "delete",
+		Versions: []apimetadata.EndpointMetadataVersion{
+			{Version: "v1alpha1", DeprecatedAt: nil},
+		},
+	},
+	"GET:/api/v1/imagecatalogexports/{name}": {
+		OperationID: "getImageCatalogExport",
+		Resource:    "imagecatalogexports",
+		Action:      "get",
+		Versions: []apimetadata.EndpointMetadataVersion{
+			{Version: "v1alpha1", DeprecatedAt: nil},
+		},
+	},
+	"GET:/api/v1/imagedefinitions": {
+		OperationID: "listImageDefinitions",
+		Resource:    "imagedefinitions",
+		Action:      "list",
+		Versions: []apimetadata.EndpointMetadataVersion{
+			{Version: "v1alpha1", DeprecatedAt: nil},
+		},
+	},
+	"POST:/api/v1/imagedefinitions": {
+		OperationID: "createImageDefinition",
+		Resource:    "imagedefinitions",
+		Action:      "create",
+		Versions: []apimetadata.EndpointMetadataVersion{
+			{Version: "v1alpha1", DeprecatedAt: nil},
+		},
+	},
+	"DELETE:/api/v1/imagedefinitions/{name}": {
+		OperationID: "deleteImageDefinition",
+		Resource:    "imagedefinitions",
+		Action:      "delete",
+		Versions: []apimetadata.EndpointMetadataVersion{
+			{Version: "v1alpha1", DeprecatedAt: nil},
+		},
+	},
+	"GET:/api/v1/imagedefinitions/{name}": {
+		OperationID: "getImageDefinition",
+		Resource:    "imagedefinitions",
 		Action:      "get",
 		Versions: []apimetadata.EndpointMetadataVersion{
 			{Version: "v1alpha1", DeprecatedAt: nil},

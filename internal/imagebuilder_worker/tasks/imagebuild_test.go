@@ -128,12 +128,12 @@ func newTestImageBuild(name string, bindingType string) *api.ImageBuild {
 			Name: lo.ToPtr(name),
 		},
 		Spec: api.ImageBuildSpec{
-			Source: api.ImageBuildSource{
+			Source: &api.ImageBuildSource{
 				Repository: "test-repo",
 				ImageName:  "test-image",
 				ImageTag:   "v1.0.0",
 			},
-			Destination: api.ImageBuildDestination{
+			Destination: &api.ImageBuildDestination{
 				Repository: "output-repo",
 				ImageName:  "output-image",
 				ImageTag:   "v1.0.0",

@@ -44,27 +44,29 @@ type ImageBuildService interface {
 
 // imageBuildService is the concrete implementation of ImageBuildService
 type imageBuildService struct {
-	store              store.ImageBuildStore
-	repositoryStore    mainstore.Repository
-	imageExportService ImageExportService
-	eventHandler       *internalservice.EventHandler
-	queueProducer      queues.QueueProducer
-	kvStore            kvstore.KVStore
-	cfg                *config.ImageBuilderServiceConfig
-	log                logrus.FieldLogger
+	store                  store.ImageBuildStore
+	repositoryStore        mainstore.Repository
+	imageDefinitionService ImageDefinitionService
+	imageExportService     ImageExportService
+	eventHandler           *internalservice.EventHandler
+	queueProducer          queues.QueueProducer
+	kvStore                kvstore.KVStore
+	cfg                    *config.ImageBuilderServiceConfig
+	log                    logrus.FieldLogger
 }
 
 // NewImageBuildService creates a new ImageBuildService
-func NewImageBuildService(s store.ImageBuildStore, repositoryStore mainstore.Repository, imageExportService ImageExportService, eventHandler *internalservice.EventHandler, queueProducer queues.QueueProducer, kvStore kvstore.KVStore, cfg *config.ImageBuilderServiceConfig, log logrus.FieldLogger) ImageBuildService {
+func NewImageBuildService(s store.ImageBuildStore, repositoryStore mainstore.Repository, imageDefinitionService ImageDefinitionService, imageExportService ImageExportService, eventHandler *internalservice.EventHandler, queueProducer queues.QueueProducer, kvStore kvstore.KVStore, cfg *config.ImageBuilderServiceConfig, log logrus.FieldLogger) ImageBuildService {
 	return &imageBuildService{
-		store:              s,
-		repositoryStore:    repositoryStore,
-		imageExportService: imageExportService,
-		eventHandler:       eventHandler,
-		queueProducer:      queueProducer,
-		kvStore:            kvStore,
-		cfg:                cfg,
-		log:                log,
+		store:                  s,
+		repositoryStore:        repositoryStore,
+		imageDefinitionService: imageDefinitionService,
+		imageExportService:     imageExportService,
+		eventHandler:           eventHandler,
+		queueProducer:          queueProducer,
+		kvStore:                kvStore,
+		cfg:                    cfg,
+		log:                    log,
 	}
 }
 
@@ -72,6 +74,15 @@ func (s *imageBuildService) Create(ctx context.Context, orgId uuid.UUID, imageBu
 	// Don't set fields that are managed by the service
 	imageBuild.Status = nil
 	NilOutManagedObjectMetaProperties(&imageBuild.Metadata)
+
+	// Resolve definition-mode fields before validation
+	if imageBuild.Spec.ImageDefinitionRef != nil && *imageBuild.Spec.ImageDefinitionRef != "" {
+		if resolvedStatus, internalErr := s.resolveDefinitionMode(ctx, orgId, &imageBuild); internalErr != nil {
+			return nil, StatusInternalServerError(internalErr.Error())
+		} else if resolvedStatus != nil {
+			return nil, *resolvedStatus
+		}
+	}
 
 	// Validate input
 	if errs, internalErr := s.validate(ctx, orgId, &imageBuild); internalErr != nil {
@@ -490,6 +501,59 @@ func (s *imageBuildService) GetLogs(ctx context.Context, orgId uuid.UUID, name s
 	return nil, logs, StatusOK()
 }
 
+// resolveDefinitionMode populates status.resolvedSource, status.resolvedDestination, and status.resolvedVersion
+// from the referenced ImageDefinition for definition-mode builds.
+// Returns a *Status error on validation failure, or a non-nil error for internal failures.
+func (s *imageBuildService) resolveDefinitionMode(ctx context.Context, orgId uuid.UUID, imageBuild *domain.ImageBuild) (*domain.Status, error) {
+	defName := lo.FromPtr(imageBuild.Spec.ImageDefinitionRef)
+
+	// Enforce mutual exclusivity: source and destination must be absent
+	if imageBuild.Spec.Source != nil {
+		st := StatusBadRequest("spec.source must not be set when spec.imageDefinitionRef is provided; they are mutually exclusive")
+		return &st, nil
+	}
+	if imageBuild.Spec.Destination != nil {
+		st := StatusBadRequest("spec.destination must not be set when spec.imageDefinitionRef is provided; they are mutually exclusive")
+		return &st, nil
+	}
+
+	// Load the ImageDefinition
+	imageDef, getStatus := s.imageDefinitionService.Get(ctx, orgId, defName)
+	if !IsStatusOK(getStatus) {
+		if getStatus.Code == 404 {
+			st := StatusBadRequest(fmt.Sprintf("spec.imageDefinitionRef: ImageDefinition %q not found", defName))
+			return &st, nil
+		}
+		return nil, fmt.Errorf("failed to get ImageDefinition %q: %s", defName, getStatus.Message)
+	}
+
+	// Compute next version
+	nextVer, err := s.imageDefinitionService.NextVersion(ctx, orgId, defName, imageDef.Spec.Version)
+	if err != nil {
+		return nil, fmt.Errorf("failed to compute next version: %w", err)
+	}
+
+	// Populate status with resolved values
+	resolvedSource := domain.ImageBuildSource{
+		Repository: imageDef.Spec.Source.Repository,
+		ImageName:  imageDef.Spec.Source.ImageName,
+		ImageTag:   imageDef.Spec.Source.ImageTag,
+	}
+	resolvedDestination := domain.ImageBuildDestination{
+		Repository: imageDef.Spec.Destination.Repository,
+		ImageName:  imageDef.Spec.Destination.ImageName,
+		ImageTag:   nextVer,
+	}
+
+	imageBuild.Status = &domain.ImageBuildStatus{
+		ResolvedSource:      &resolvedSource,
+		ResolvedDestination: &resolvedDestination,
+		ResolvedVersion:     &nextVer,
+	}
+
+	return nil, nil
+}
+
 // validate performs validation on an ImageBuild resource
 // Returns validation errors (4xx) and internal errors (5xx) separately
 func (s *imageBuildService) validate(ctx context.Context, orgId uuid.UUID, imageBuild *domain.ImageBuild) ([]error, error) {
@@ -497,6 +561,20 @@ func (s *imageBuildService) validate(ctx context.Context, orgId uuid.UUID, image
 
 	if lo.FromPtr(imageBuild.Metadata.Name) == "" {
 		errs = append(errs, errors.New("metadata.name is required"))
+	}
+
+	// Definition mode: source/destination are in status; only binding validation needed
+	if imageBuild.Spec.ImageDefinitionRef != nil && *imageBuild.Spec.ImageDefinitionRef != "" {
+		return errs, nil
+	}
+
+	if imageBuild.Spec.Source == nil {
+		errs = append(errs, errors.New("spec.source is required"))
+		return errs, nil
+	}
+	if imageBuild.Spec.Destination == nil {
+		errs = append(errs, errors.New("spec.destination is required"))
+		return errs, nil
 	}
 
 	if imageBuild.Spec.Source.Repository == "" {

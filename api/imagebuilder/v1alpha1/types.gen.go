@@ -89,8 +89,10 @@ const (
 
 // Defines values for ResourceKind.
 const (
-	ResourceKindImageBuild  ResourceKind = "ImageBuild"
-	ResourceKindImageExport ResourceKind = "ImageExport"
+	ResourceKindImageBuild         ResourceKind = "ImageBuild"
+	ResourceKindImageCatalogExport ResourceKind = "ImageCatalogExport"
+	ResourceKindImageDefinition    ResourceKind = "ImageDefinition"
+	ResourceKindImageExport        ResourceKind = "ImageExport"
 )
 
 // ApiVersion APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources.
@@ -126,6 +128,8 @@ type ImageBuild struct {
 	Metadata externalRef0.ObjectMeta `json:"metadata"`
 
 	// Spec ImageBuildSpec describes the specification for an image build.
+	// Exactly one of imageDefinitionRef or (source + destination) must be provided — they are mutually exclusive.
+	// When imageDefinitionRef is set, source and destination must be absent; they are resolved from the ImageDefinition at create time and stored in status.
 	Spec ImageBuildSpec `json:"spec"`
 
 	// Status ImageBuildStatus represents the current status of an ImageBuild.
@@ -216,15 +220,22 @@ type ImageBuildSource struct {
 }
 
 // ImageBuildSpec ImageBuildSpec describes the specification for an image build.
+// Exactly one of imageDefinitionRef or (source + destination) must be provided — they are mutually exclusive.
+// When imageDefinitionRef is set, source and destination must be absent; they are resolved from the ImageDefinition at create time and stored in status.
 type ImageBuildSpec struct {
 	// Binding ImageBuildBinding specifies binding configuration for the build.
 	Binding ImageBuildBinding `json:"binding"`
 
 	// Destination ImageBuildDestination specifies the destination for the built image.
-	Destination ImageBuildDestination `json:"destination"`
+	Destination *ImageBuildDestination `json:"destination,omitempty"`
+
+	// ImageDefinitionRef The name of the ImageDefinition resource this build is based on.
+	// Mutually exclusive with spec.source and spec.destination.
+	// When set, source and destination are derived from the ImageDefinition and the image tag is auto-incremented.
+	ImageDefinitionRef *string `json:"imageDefinitionRef,omitempty"`
 
 	// Source ImageBuildSource specifies the source image for the build.
-	Source ImageBuildSource `json:"source"`
+	Source *ImageBuildSource `json:"source,omitempty"`
 
 	// UserConfiguration ImageBuildUserConfiguration specifies user configuration for the build.
 	UserConfiguration *ImageBuildUserConfiguration `json:"userConfiguration,omitempty"`
@@ -246,6 +257,15 @@ type ImageBuildStatus struct {
 
 	// ManifestDigest The digest of the built image manifest.
 	ManifestDigest *string `json:"manifestDigest,omitempty"`
+
+	// ResolvedDestination ImageBuildDestination specifies the destination for the built image.
+	ResolvedDestination *ImageBuildDestination `json:"resolvedDestination,omitempty"`
+
+	// ResolvedSource ImageBuildSource specifies the source image for the build.
+	ResolvedSource *ImageBuildSource `json:"resolvedSource,omitempty"`
+
+	// ResolvedVersion The resolved semantic version (e.g. 1.0.2), populated at create time when imageDefinitionRef is set.
+	ResolvedVersion *string `json:"resolvedVersion,omitempty"`
 }
 
 // ImageBuildUserConfiguration ImageBuildUserConfiguration specifies user configuration for the build.
@@ -255,6 +275,123 @@ type ImageBuildUserConfiguration struct {
 
 	// Username The username for the user configuration.
 	Username string `json:"username"`
+}
+
+// ImageCatalogExport ImageCatalogExport links an ImageDefinition to a core/Catalog. On every successful
+// build of the referenced ImageDefinition, the associated CatalogItem is created or
+// updated with a new version entry.
+type ImageCatalogExport struct {
+	// ApiVersion APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources.
+	ApiVersion ApiVersion `json:"apiVersion"`
+
+	// Kind Kind is a string value representing the REST resource this object represents.
+	Kind string `json:"kind"`
+
+	// Metadata ObjectMeta is metadata that all persisted resources must have, which includes all objects users must create.
+	Metadata externalRef0.ObjectMeta `json:"metadata"`
+
+	// Spec ImageCatalogExportSpec describes the catalog export configuration.
+	Spec ImageCatalogExportSpec `json:"spec"`
+}
+
+// ImageCatalogExportList ImageCatalogExportList is a list of ImageCatalogExport resources.
+type ImageCatalogExportList struct {
+	// ApiVersion APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources.
+	ApiVersion ApiVersion `json:"apiVersion"`
+
+	// Items List of ImageCatalogExport resources.
+	Items []ImageCatalogExport `json:"items"`
+
+	// Kind Kind is a string value representing the REST resource this object represents.
+	Kind string `json:"kind"`
+
+	// Metadata ListMeta describes metadata that synthetic resources must have, including lists and various status objects. A resource may have only one of {ObjectMeta, ListMeta}.
+	Metadata externalRef0.ListMeta `json:"metadata"`
+}
+
+// ImageCatalogExportSpec ImageCatalogExportSpec describes the catalog export configuration.
+type ImageCatalogExportSpec struct {
+	// CatalogItemName The name of the CatalogItem within the catalog. Defaults to the value of imageDefinitionRef if not set.
+	CatalogItemName *string `json:"catalogItemName,omitempty"`
+
+	// CatalogRef The name of the core/Catalog resource where the CatalogItem will be created or updated.
+	CatalogRef string `json:"catalogRef"`
+
+	// DisplayName Human-readable display name shown in catalog listings.
+	DisplayName *string `json:"displayName,omitempty"`
+
+	// DocumentationUrl Link to external documentation.
+	DocumentationUrl *string `json:"documentationUrl,omitempty"`
+
+	// Homepage The homepage URL for the catalog item project.
+	Homepage *string `json:"homepage,omitempty"`
+
+	// ImageDefinitionRef The name of the ImageDefinition resource this export is associated with.
+	ImageDefinitionRef string `json:"imageDefinitionRef"`
+
+	// Provider Provider or publisher of the catalog item.
+	Provider *string `json:"provider,omitempty"`
+
+	// Readme Detailed documentation for the catalog item, preferably in markdown format.
+	Readme *string `json:"readme,omitempty"`
+
+	// ShortDescription A brief one-line description of the catalog item.
+	ShortDescription *string `json:"shortDescription,omitempty"`
+
+	// Support Link to support resources or documentation.
+	Support *string `json:"support,omitempty"`
+}
+
+// ImageDefinition ImageDefinition is a reusable template describing the source, destination, and version pattern for image builds. Creating an ImageDefinition triggers no automation by itself.
+type ImageDefinition struct {
+	// ApiVersion APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources.
+	ApiVersion ApiVersion `json:"apiVersion"`
+
+	// Kind Kind is a string value representing the REST resource this object represents.
+	Kind string `json:"kind"`
+
+	// Metadata ObjectMeta is metadata that all persisted resources must have, which includes all objects users must create.
+	Metadata externalRef0.ObjectMeta `json:"metadata"`
+
+	// Spec ImageDefinitionSpec describes the template for image builds derived from this definition.
+	Spec ImageDefinitionSpec `json:"spec"`
+}
+
+// ImageDefinitionDestination ImageDefinitionDestination specifies the destination repository and image name for builds. The image tag is not set here; it is computed per build.
+type ImageDefinitionDestination struct {
+	// ImageName The name of the output image.
+	ImageName string `json:"imageName"`
+
+	// Repository The name of the Repository resource of type OCI to push the built image to.
+	Repository string `json:"repository"`
+}
+
+// ImageDefinitionList ImageDefinitionList is a list of ImageDefinition resources.
+type ImageDefinitionList struct {
+	// ApiVersion APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources.
+	ApiVersion ApiVersion `json:"apiVersion"`
+
+	// Items List of ImageDefinition resources.
+	Items []ImageDefinition `json:"items"`
+
+	// Kind Kind is a string value representing the REST resource this object represents.
+	Kind string `json:"kind"`
+
+	// Metadata ListMeta describes metadata that synthetic resources must have, including lists and various status objects. A resource may have only one of {ObjectMeta, ListMeta}.
+	Metadata externalRef0.ListMeta `json:"metadata"`
+}
+
+// ImageDefinitionSpec ImageDefinitionSpec describes the template for image builds derived from this definition.
+type ImageDefinitionSpec struct {
+	// Destination ImageDefinitionDestination specifies the destination repository and image name for builds. The image tag is not set here; it is computed per build.
+	Destination ImageDefinitionDestination `json:"destination"`
+
+	// Source ImageBuildSource specifies the source image for the build.
+	Source ImageBuildSource `json:"source"`
+
+	// Version Semver pattern for the image tag in the form MAJOR.MINOR.x (e.g. 1.0.x).
+	// The patch component (x) is auto-incremented on each successful build.
+	Version string `json:"version"`
 }
 
 // ImageExport ImageExport represents an export request to convert and push images to different formats.
@@ -412,6 +549,36 @@ type GetImageBuildLogParams struct {
 	Follow *bool `form:"follow,omitempty" json:"follow,omitempty"`
 }
 
+// ListImageCatalogExportsParams defines parameters for ListImageCatalogExports.
+type ListImageCatalogExportsParams struct {
+	// LabelSelector A selector to restrict the list of returned objects by their labels.
+	LabelSelector *string `form:"labelSelector,omitempty" json:"labelSelector,omitempty"`
+
+	// FieldSelector A selector to restrict the list of returned objects by their fields.
+	FieldSelector *string `form:"fieldSelector,omitempty" json:"fieldSelector,omitempty"`
+
+	// Limit The maximum number of results returned in the list response.
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Continue An optional parameter to query more results from the server.
+	Continue *string `form:"continue,omitempty" json:"continue,omitempty"`
+}
+
+// ListImageDefinitionsParams defines parameters for ListImageDefinitions.
+type ListImageDefinitionsParams struct {
+	// LabelSelector A selector to restrict the list of returned objects by their labels.
+	LabelSelector *string `form:"labelSelector,omitempty" json:"labelSelector,omitempty"`
+
+	// FieldSelector A selector to restrict the list of returned objects by their fields.
+	FieldSelector *string `form:"fieldSelector,omitempty" json:"fieldSelector,omitempty"`
+
+	// Limit The maximum number of results returned in the list response.
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Continue An optional parameter to query more results from the server.
+	Continue *string `form:"continue,omitempty" json:"continue,omitempty"`
+}
+
 // ListImageExportsParams defines parameters for ListImageExports.
 type ListImageExportsParams struct {
 	// LabelSelector A selector to restrict the list of returned objects by their labels.
@@ -435,6 +602,12 @@ type GetImageExportLogParams struct {
 
 // CreateImageBuildJSONRequestBody defines body for CreateImageBuild for application/json ContentType.
 type CreateImageBuildJSONRequestBody = ImageBuild
+
+// CreateImageCatalogExportJSONRequestBody defines body for CreateImageCatalogExport for application/json ContentType.
+type CreateImageCatalogExportJSONRequestBody = ImageCatalogExport
+
+// CreateImageDefinitionJSONRequestBody defines body for CreateImageDefinition for application/json ContentType.
+type CreateImageDefinitionJSONRequestBody = ImageDefinition
 
 // CreateImageExportJSONRequestBody defines body for CreateImageExport for application/json ContentType.
 type CreateImageExportJSONRequestBody = ImageExport
